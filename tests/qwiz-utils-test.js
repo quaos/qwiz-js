@@ -1,8 +1,10 @@
 
 import assert from "assert";
+import debug from "debug";
 import QUtils from "../src/lib/qwiz-utils";
 
 describe("qwiz-utils", function () {
+    const DEBUG_NS = "qwiz.utils.tests";
     const TEST_TIMEOUT = process.env.TEST_TIMEOUT || 300000;
 
     it("Can be imported", (done) => {
@@ -107,11 +109,11 @@ describe("qwiz-utils", function () {
                 target: obj2
             };
             walkOpts.onBeforeAll = (ctx) => {
-                console.log("Test Object structure (BEFORE): ", obj);
+                debug(DEBUG_NS)("Test Object structure (BEFORE): ", obj);
             };
             walkOpts.onDefault = (val1, ctx) => {
                 //let fullKey = `${ctx.path.join(".")}.${ctx.key}`;
-                console.log("Processing: ", `${ctx.fullKey} => `, val1, "; Context: ", ctx);
+                debug(DEBUG_NS)("Processing: ", `${ctx.fullKey} => `, val1, "; Context: ", ctx);
                 assert.notEqual(val1, obj);
                 assert.notEqual(ctx.fullKey, "c.cx");
                 assert.ok(ctx.depth < walkOpts.maxDepth);
@@ -130,7 +132,7 @@ describe("qwiz-utils", function () {
                 return val2;
             };
             walkOpts.onAfterAll = (ctx) => {
-                console.log("Test Object structure (AFTER): ", ctx.target);
+                debug(DEBUG_NS)("Test Object structure (AFTER): ", ctx.target);
             };
             QUtils.walkObject(obj, walkOpts);
             assert.equal(nFlds, expected);
@@ -154,13 +156,13 @@ describe("qwiz-utils", function () {
             obj.c = { ca: 31, cb: 32, cc: "33", cd: [true, false] };
             obj.c.cd.push(obj.c);
             obj2.c = { cd: [341, 342, 343] };
-            console.log("Test Object structure (BEFORE): ", obj);
+            debug(DEBUG_NS)("Test Object structure (BEFORE): ", obj);
             let mergeOpts = {
                 excludesList: ["name"]
                 //deep: false
             };
             QUtils.merge(obj2, obj, mergeOpts);
-            console.log("Test Object structure (AFTER): ", obj2);
+            debug(DEBUG_NS)("Test Object structure (AFTER): ", obj2);
             //assert.equal(nFlds, expected);
             assert.equal(obj2.c, obj.c);
             assert.equal(obj2.c.cd, obj.c.cd);
@@ -180,13 +182,13 @@ describe("qwiz-utils", function () {
             obj.c = { ca: 31, cb: 32, cc: "33", cd: [true, false] };
             obj.c.cd.push(obj.c);
             obj2.c = { cd: ["FromObject2"] };
-            console.log("Test Object structure (BEFORE): ", obj);
+            debug(DEBUG_NS)("Test Object structure (BEFORE): ", obj);
             let mergeOpts = {
                 excludesList: ["name"],
                 deep: true
             };
             QUtils.merge(obj2, obj, mergeOpts);
-            console.log("Test Object structure (AFTER): ", obj2);
+            debug(DEBUG_NS)("Test Object structure (AFTER): ", obj2);
             //assert.equal(nFlds, expected);
             assert.equal(obj2.a, obj.a);
             assert.notEqual(obj2.c, obj.c);
@@ -207,13 +209,13 @@ describe("qwiz-utils", function () {
             obj.c = { ca: 31, cb: 32, cc: "33", cd: [true, false] };
             obj.c.cd.push(obj.c);
             obj.c.cd.push(new Date());
-            console.log("Test Object structure (BEFORE): ", obj);
+            debug(DEBUG_NS)("Test Object structure (BEFORE): ", obj);
             let mergeOpts = {
                 excludesList: ["name"],
                 deep: true
             };
             const obj2 = QUtils.clone(obj, mergeOpts);
-            console.log("Test Object structure (AFTER): ", obj2);
+            debug(DEBUG_NS)("Test Object structure (AFTER): ", obj2);
             //assert.equal(nFlds, expected);
             assert.equal(obj2.a, obj.a);
             assert.notEqual(obj2.c, obj.c);

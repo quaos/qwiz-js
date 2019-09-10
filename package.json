@@ -1,8 +1,8 @@
 {
   "name": "qwiz",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Q'Wiz Utilities for JS",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "browserify": "node -r esm node_modules/browserify/bin/cmd.js -p esmify src/index.browser.js >dist/qwiz.bundle.js && node -r esm node_modules/browserify/bin/cmd.js -p esmify -g uglifyify src/index.browser.js >dist/qwiz.bundle.min.js",
     "lint": "node node_modules/eslint/bin/eslint.js ./src",
