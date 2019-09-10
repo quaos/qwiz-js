@@ -110,8 +110,9 @@ qwiz.utils.merge(dest, src, { deep: true });
 
 ## Usage in Browsers
 
-```javascript
-<script src="assets/js/qwiz.bundle.js"></script>
+```html
+<!--<script src="assets/js/qwiz.bundle.js"></script>--><!-- For Development -->
+<script src="assets/js/qwiz.bundle.min.js"></script><!-- For Production -->
 <script type="text/javascript">
 (function(qwiz) {
 
@@ -120,9 +121,19 @@ const api = new qwiz.web.WebApiClient({
     document: document,
     /* ... */
 });
+api.on(qwiz.web.WebApiClient.EVT_ERROR, (err) => {
+    /* ... */
+});
+
 const view = new qwiz.web.WebView({
     window: window,
     document: document,
+    /* ... */
+}).initOnReady();
+view.on(qwiz.web.WebView.EVT_INIT_COMPLETE, (stepResults) => {
+    /* ... */
+});
+view.on(qwiz.web.WebView.EVT_ERROR, (err) => {
     /* ... */
 });
 

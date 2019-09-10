@@ -4,6 +4,12 @@ import Intl from "intl";
 import QUtils from "./qwiz-utils";
 import QTextUtils from "./qwiz-text-utils";
 
+/**
+ * WORKAROUND FOR Intl BUG
+ * Ref: https://github.com/andyearnshaw/Intl.js/issues/256
+ */
+Intl.__disableRegExpRestore();
+
 //DEPRECATED
 //Namespaces
 /*
@@ -14,6 +20,7 @@ global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
 */
 
 export default (function(_namespace) {
+
     const QDateUtils = {
         CENTURY_BASE: 1900,
         //ISO_DATE_PATTERN: /^(\d{4}(-\d{2}(-\d{2})?)?)$/,

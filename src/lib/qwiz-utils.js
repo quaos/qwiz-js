@@ -589,7 +589,9 @@ export default (function(_namespace) {
         return childProto2;
     }
     function attachExtension(cls, extCls) {
-        cls.prototype = cls.prototype || { constructor: cls };
+        if (!cls.prototype) {
+            cls.prototype = { constructor: cls };
+        }
         merge(cls.prototype, extCls.prototype);
         merge(cls, extCls, { deep: true });
 

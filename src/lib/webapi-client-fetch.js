@@ -186,7 +186,10 @@ export default (function(_namespace) {
                     } else if ((resp.status === _static.HTTP_NO_CONTENT) && (opts.noContentExpected)) {
                         //Ignore
                     } else {
-                        throw new Error(`Got response status: ${resp.status} ${resp.statusText}`);
+                        let err = new Error(`Got response status: ${resp.status} ${resp.statusText}`);
+                        err.statusCode = resp.status;
+                        
+                        throw err;
                     }
                 }
 
