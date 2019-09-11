@@ -94,14 +94,14 @@ _I try to make this depend on the least number of most lightweight tools & frame
 
   `npm run test-debug` 
 
-## Usage in NodeJS & CommonJS
+## Usage in NodeJS & other runtimes
 
 ```javascript
 //For ES6 Modules:
-import qwiz from "qwiz";
+//import qwiz from "qwiz/index";
 
-//For pre-ES6 Node.JS:
-//const qwiz = require("qwiz");
+//For pre-ES6-Modules Node.JS:
+const qwiz = require("qwiz");
 
 qwiz.utils.merge(dest, src, { deep: true });
 /* .... */

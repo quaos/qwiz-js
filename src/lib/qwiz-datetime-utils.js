@@ -1,8 +1,8 @@
 "use strict";
 
-import Intl from "intl";
-import QUtils from "./qwiz-utils";
-import QTextUtils from "./qwiz-text-utils";
+const Intl = require("intl");
+const QUtils = require("./qwiz-utils");
+const QTextUtils = require("./qwiz-text-utils");
 
 /**
  * WORKAROUND FOR Intl BUG
@@ -10,16 +10,7 @@ import QTextUtils from "./qwiz-text-utils";
  */
 Intl.__disableRegExpRestore();
 
-//DEPRECATED
-//Namespaces
-/*
-var global = global || window;
-global.chakritw = global.chakritw || {};
-global.chakritw.qwiz = global.chakritw.qwiz || {};
-global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
-*/
-
-export default (function(_namespace) {
+module.exports = (function(_namespace) {
 
     const QDateUtils = {
         CENTURY_BASE: 1900,

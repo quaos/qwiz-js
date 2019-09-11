@@ -12,6 +12,8 @@ describe("qwiz-webview-libs", function () {
     it("Can be imported", (done) => {
         assert.ok(QWebLibs);
         assert.equal(typeof QWebLibs, "object");
+        assert.equal(typeof QWebLibs.WebView, "function");
+        assert.equal(typeof QWebLibs.IndexView, "function");
         done();
     });
 

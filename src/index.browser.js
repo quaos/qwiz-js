@@ -1,3 +1,4 @@
+"use strict";
 
 import ES6Promise from "es6-promise";
 import QUtils from "./lib/qwiz-utils";

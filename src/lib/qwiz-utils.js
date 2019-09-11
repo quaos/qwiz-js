@@ -1,5 +1,6 @@
+"use strict";
 
-import debug from "debug";
+const debug = require("debug");
 
 //Global namespaces
 var window = window || (function _DummyWindow() {
@@ -24,16 +25,7 @@ var window = window || (function _DummyWindow() {
 })();
 var global = global || window;
 
-
-//DEPRECATED
-//Namespaces
-/*
-global.chakritw = global.chakritw || {};
-global.chakritw.qwiz = global.chakritw.qwiz || {};
-global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
-*/
-
-export default (function(_namespace) {
+module.exports = (function(_namespace) {
     const QUtils = {};
     const DEBUG_NS = "qwiz.utils";
 

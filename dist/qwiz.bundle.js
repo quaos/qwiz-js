@@ -8053,157 +8053,6 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./support/isBuffer":12,"_process":10,"inherits":11}],14:[function(require,module,exports){
-var indexOf = function (xs, item) {
-    if (xs.indexOf) return xs.indexOf(item);
-    else for (var i = 0; i < xs.length; i++) {
-        if (xs[i] === item) return i;
-    }
-    return -1;
-};
-var Object_keys = function (obj) {
-    if (Object.keys) return Object.keys(obj)
-    else {
-        var res = [];
-        for (var key in obj) res.push(key)
-        return res;
-    }
-};
-
-var forEach = function (xs, fn) {
-    if (xs.forEach) return xs.forEach(fn)
-    else for (var i = 0; i < xs.length; i++) {
-        fn(xs[i], i, xs);
-    }
-};
-
-var defineProp = (function() {
-    try {
-        Object.defineProperty({}, '_', {});
-        return function(obj, name, value) {
-            Object.defineProperty(obj, name, {
-                writable: true,
-                enumerable: false,
-                configurable: true,
-                value: value
-            })
-        };
-    } catch(e) {
-        return function(obj, name, value) {
-            obj[name] = value;
-        };
-    }
-}());
-
-var globals = ['Array', 'Boolean', 'Date', 'Error', 'EvalError', 'Function',
-'Infinity', 'JSON', 'Math', 'NaN', 'Number', 'Object', 'RangeError',
-'ReferenceError', 'RegExp', 'String', 'SyntaxError', 'TypeError', 'URIError',
-'decodeURI', 'decodeURIComponent', 'encodeURI', 'encodeURIComponent', 'escape',
-'eval', 'isFinite', 'isNaN', 'parseFloat', 'parseInt', 'undefined', 'unescape'];
-
-function Context() {}
-Context.prototype = {};
-
-var Script = exports.Script = function NodeScript (code) {
-    if (!(this instanceof Script)) return new Script(code);
-    this.code = code;
-};
-
-Script.prototype.runInContext = function (context) {
-    if (!(context instanceof Context)) {
-        throw new TypeError("needs a 'context' argument.");
-    }
-    
-    var iframe = document.createElement('iframe');
-    if (!iframe.style) iframe.style = {};
-    iframe.style.display = 'none';
-    
-    document.body.appendChild(iframe);
-    
-    var win = iframe.contentWindow;
-    var wEval = win.eval, wExecScript = win.execScript;
-
-    if (!wEval && wExecScript) {
-        // win.eval() magically appears when this is called in IE:
-        wExecScript.call(win, 'null');
-        wEval = win.eval;
-    }
-    
-    forEach(Object_keys(context), function (key) {
-        win[key] = context[key];
-    });
-    forEach(globals, function (key) {
-        if (context[key]) {
-            win[key] = context[key];
-        }
-    });
-    
-    var winKeys = Object_keys(win);
-
-    var res = wEval.call(win, this.code);
-    
-    forEach(Object_keys(win), function (key) {
-        // Avoid copying circular objects like `top` and `window` by only
-        // updating existing context properties or new properties in the `win`
-        // that was only introduced after the eval.
-        if (key in context || indexOf(winKeys, key) === -1) {
-            context[key] = win[key];
-        }
-    });
-
-    forEach(globals, function (key) {
-        if (!(key in context)) {
-            defineProp(context, key, win[key]);
-        }
-    });
-    
-    document.body.removeChild(iframe);
-    
-    return res;
-};
-
-Script.prototype.runInThisContext = function () {
-    return eval(this.code); // maybe...
-};
-
-Script.prototype.runInNewContext = function (context) {
-    var ctx = Script.createContext(context);
-    var res = this.runInContext(ctx);
-
-    if (context) {
-        forEach(Object_keys(ctx), function (key) {
-            context[key] = ctx[key];
-        });
-    }
-
-    return res;
-};
-
-forEach(Object_keys(Script.prototype), function (name) {
-    exports[name] = Script[name] = function (code) {
-        var s = Script(code);
-        return s[name].apply(s, [].slice.call(arguments, 1));
-    };
-});
-
-exports.isContext = function (context) {
-    return context instanceof Context;
-};
-
-exports.createScript = function (code) {
-    return exports.Script(code);
-};
-
-exports.createContext = Script.createContext = function (context) {
-    var copy = new Context();
-    if(typeof context === 'object') {
-        forEach(Object_keys(context), function (key) {
-            copy[key] = context[key];
-        });
-    }
-    return copy;
-};
-
-},{}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -8245,1737 +8094,1575 @@ _qwizUtils.default.merge(global.chakritw.qwiz, mods);
 var _default = mods;
 exports.default = _default;
 
-},{"./lib/qwiz-datetime-utils":16,"./lib/qwiz-text-utils":17,"./lib/qwiz-utils":18,"./lib/webapi-client-fetch":19,"./lib/webview-libs":20,"es6-promise":5}],16:[function(require,module,exports){
+},{"./lib/qwiz-datetime-utils":15,"./lib/qwiz-text-utils":16,"./lib/qwiz-utils":17,"./lib/webapi-client-fetch":18,"./lib/webview-libs":19,"es6-promise":5}],15:[function(require,module,exports){
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
+const Intl = require("intl");
+const QUtils = require("./qwiz-utils");
+const QTextUtils = require("./qwiz-text-utils");
 
-var _intl = _interopRequireDefault(require("intl"));
+/**
+ * WORKAROUND FOR Intl BUG
+ * Ref: https://github.com/andyearnshaw/Intl.js/issues/256
+ */
+Intl.__disableRegExpRestore();
 
-var _qwizUtils = _interopRequireDefault(require("./qwiz-utils"));
+module.exports = (function(_namespace) {
 
-var _qwizTextUtils = _interopRequireDefault(require("./qwiz-text-utils"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//DEPRECATED
-//Namespaces
-
-/*
-var global = global || window;
-global.chakritw = global.chakritw || {};
-global.chakritw.qwiz = global.chakritw.qwiz || {};
-global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
-*/
-var _default = function (_namespace) {
-  const QDateUtils = {
-    CENTURY_BASE: 1900,
-    //ISO_DATE_PATTERN: /^(\d{4}(-\d{2}(-\d{2})?)?)$/,
-    ISO_DATETIME_PATTERN: /^((\d{4})(-(\d{2})(-(\d{2}))?)?)(T((\d{2})(:(\d{2})(:(\d{2})(\.(\d{1,3}))?)?)?)(Z|([+|-]{1})((\d{1,2})(:?(\d{1,2}))?)))?$/,
-    ISO_DATETIME_GROUPS_MAP: [[2, "yyyy"], [4, "mm"], [6, "dd"], [9, "HH"], [11, "MM"], [13, "SS"], [15, "sss"], [16, "TZ"], [17, "TzSign"], [19, "TzHrs"], [21, "TzMins"]],
-    ISO_TIMEZONE_PATTERN: /^(Z|([+|-]{1})((\d{1,2})(:?(\d{1,2}))?))$/,
-    ISO_TIMEZONE_GROUPS_MAP: [[1, "TZ"], [2, "TzSign"], [4, "TzHrs"], [6, "TzMins"]],
-    Granularities: {
-      YEARS: "YEARS",
-      MONTHS: "MONTHS",
-      DAYS: "DAYS",
-      HOURS: "HOURS",
-      MINUTES: "MINUTES",
-      SECONDS: "SECONDS",
-      MILLISECS: "MILLISECS"
-    }
-  };
-  QDateUtils.monthNamesByLocaleMap = {};
-  QDateUtils.SHORT_MONTH_NAMES_MAP = []; //Date-time util classes&functions
-
-  class LocalCalendar {
-    static get(id, props) {
-      let cal = id || id === 0 ? LocalCalendar.CalendarsMap[id] : null;
-
-      if (!cal) {
-        props = props || {};
-        props.id = id;
-        cal = new LocalCalendar(props);
-      }
-
-      return cal;
-    }
-
-    constructor(props) {
-      this.id = null;
-      this.localeCode = null;
-      this.name = null;
-      this.timeZoneOffset = 0;
-      this.era = LocalCalendar.CHRISTIANS_ERA;
-      this.daysInWeek = 7;
-      this.monthsInYear = 12;
-      props && _qwizUtils.default.merge(this, props, {
-        deep: true
-      });
-      !this.localeCode && this.localeCode !== 0 && (this.localeCode = this.id || "default");
-      this.dowNames = new Array(this.daysInWeek);
-      this.shortDowNames = new Array(this.daysInWeek);
-      this.monthNames = new Array(this.monthsInYear);
-      this.shortMonthNames = new Array(this.monthsInYear);
-      this._dowFmt = new _intl.default.DateTimeFormat(this.localeCode, {
-        weekday: "long"
-      });
-      this._sDowFmt = new _intl.default.DateTimeFormat(this.localeCode, {
-        weekday: "short"
-      });
-
-      for (let dow = 0; dow < this.daysInWeek; dow++) {
-        let t = new Date();
-        t = new Date(t.setDate(t.getDate() - t.getDay() + dow));
-        this.dowNames[dow] = this._dowFmt.format(t);
-        this.shortDowNames[dow] = this._sDowFmt.format(t);
-      }
-
-      this._monFmt = new _intl.default.DateTimeFormat(this.localeCode, {
-        month: "long"
-      });
-      this._sMonFmt = new _intl.default.DateTimeFormat(this.localeCode, {
-        month: "short"
-      });
-
-      for (let m = 0; m < this.monthsInYear; m++) {
-        let t = new Date(new Date().setMonth(m));
-        this.monthNames[m] = this._monFmt.format(t);
-        this.shortMonthNames[m] = this._sMonFmt.format(t);
-      }
-
-      this._fullFmt = new _intl.default.DateTimeFormat(this.localeCode);
-      (this.id || this.id === 0) && (LocalCalendar.CalendarsMap[this.id] = this);
-    }
-
-    parse(s, pattern, opts) {
-      opts = opts || {};
-      const era = opts.era || this.era;
-      const pattern2 = pattern.replace(/(yyyy|yy|mmmm|mmm|mm|m|dd|d|HH|H|MM|M|SS|S|sss|s|Z)/g, "$${$1}");
-
-      const flds = _qwizTextUtils.default.parseTextFields(s, pattern2, {});
-
-      const flds2 = {
-        yyyy: flds.yyyy,
-        mm: flds.mm,
-        dd: flds.dd,
-        HH: flds.HH,
-        MM: flds.MM,
-        SS: flds.SS,
-        sss: flds.sss,
-        Z: flds.Z
-      };
-
-      if (flds.yy || flds.yy === 0) {
-        flds2.yyyy = flds.yy + QDateUtils.CENTURY_BASE;
-      }
-
-      if (flds.mmm || flds.mmmm) {
-        if (flds.mmmm) {
-          flds2.mm = this.monthNames.indexOf(flds.mmmm) + 1;
-        } else {
-          flds2.mm = this.shortMonthNames.indexOf(flds.mmm) + 1;
+    const QDateUtils = {
+        CENTURY_BASE: 1900,
+        //ISO_DATE_PATTERN: /^(\d{4}(-\d{2}(-\d{2})?)?)$/,
+        ISO_DATETIME_PATTERN: /^((\d{4})(-(\d{2})(-(\d{2}))?)?)(T((\d{2})(:(\d{2})(:(\d{2})(\.(\d{1,3}))?)?)?)(Z|([+|-]{1})((\d{1,2})(:?(\d{1,2}))?)))?$/,
+        ISO_DATETIME_GROUPS_MAP: [
+            [2, "yyyy"],
+            [4, "mm"],
+            [6, "dd"],
+            [9, "HH"],
+            [11, "MM"],
+            [13, "SS"],
+            [15, "sss"],
+            [16, "TZ"],
+            [17, "TzSign"],
+            [19, "TzHrs"],
+            [21, "TzMins"]
+        ],
+        ISO_TIMEZONE_PATTERN: /^(Z|([+|-]{1})((\d{1,2})(:?(\d{1,2}))?))$/,
+        ISO_TIMEZONE_GROUPS_MAP: [
+            [1, "TZ"],
+            [2, "TzSign"],
+            [4, "TzHrs"],
+            [6, "TzMins"]
+        ],
+        Granularities: {
+            YEARS: "YEARS",
+            MONTHS: "MONTHS",
+            DAYS: "DAYS",
+            HOURS: "HOURS",
+            MINUTES: "MINUTES",
+            SECONDS: "SECONDS",
+            MILLISECS: "MILLISECS"
         }
-      } else if (flds.m || flds.m === 0) {
-        flds2.mm = flds.m;
-      }
+    };
+    QDateUtils.monthNamesByLocaleMap = {};
+    QDateUtils.SHORT_MONTH_NAMES_MAP = [];
+    
+    //Date-time util classes&functions
+    
+    class LocalCalendar {
+        static get(id, props) {
+            let cal = ((id) || (id === 0)) ? LocalCalendar.CalendarsMap[id] : null;
+            if (!cal) {
+                props = props || {};
+                props.id = id;
+                cal = new LocalCalendar(props);
+            }
 
-      if (flds.d || flds.d === 0) {
-        flds2.dd = flds.d;
-      }
+            return cal;
+        }
 
-      if (flds.H || flds.H === 0) {
-        flds2.HH = flds.H;
-      }
+        constructor(props) {
+            this.id = null;
+            this.localeCode = null;
+            this.name = null;
+            this.timeZoneOffset = 0;
+            this.era = LocalCalendar.CHRISTIANS_ERA;
+            this.daysInWeek = 7;
+            this.monthsInYear = 12;
+            (props) && QUtils.merge(this, props, { deep: true });
+            (!this.localeCode) && (this.localeCode !== 0) && (this.localeCode = this.id || "default");
+            this.dowNames = new Array(this.daysInWeek);
+            this.shortDowNames = new Array(this.daysInWeek);
+            this.monthNames = new Array(this.monthsInYear);
+            this.shortMonthNames = new Array(this.monthsInYear);
+            
+            this._dowFmt = new Intl.DateTimeFormat(this.localeCode, { weekday: "long" });
+            this._sDowFmt = new Intl.DateTimeFormat(this.localeCode, { weekday: "short" });
+            for (let dow = 0;dow < this.daysInWeek;dow++) {
+                let t = new Date();
+                t = new Date(t.setDate(t.getDate() - t.getDay() + dow));
+                this.dowNames[dow] = this._dowFmt.format(t);
+                this.shortDowNames[dow] = this._sDowFmt.format(t);
+            }
 
-      if (flds.M || flds.M === 0) {
-        flds2.MM = flds.M;
-      }
+            this._monFmt = new Intl.DateTimeFormat(this.localeCode, { month: "long" });
+            this._sMonFmt = new Intl.DateTimeFormat(this.localeCode, { month: "short" });
+            for (let m = 0;m < this.monthsInYear;m++) {
+                let t = new Date(new Date().setMonth(m));
+                this.monthNames[m] = this._monFmt.format(t);
+                this.shortMonthNames[m] = this._sMonFmt.format(t);
+            }
+            this._fullFmt = new Intl.DateTimeFormat(this.localeCode);
 
-      if (flds.S || flds.S === 0) {
-        flds2.SS = flds.S;
-      }
+            ((this.id) || (this.id === 0))
+                && (LocalCalendar.CalendarsMap[this.id] = this);
+        }
 
-      if (flds.ss || flds.ss === 0) {
-        flds2.sss = flds.ss;
-      } else if (flds.s || flds.s === 0) {
-        flds2.sss = flds.s;
-      }
+        parse(s, pattern, opts) {
+            opts = opts || {};
+            const era = opts.era || this.era;
+            const pattern2 = pattern.replace(/(yyyy|yy|mmmm|mmm|mm|m|dd|d|HH|H|MM|M|SS|S|sss|s|Z)/g, "$${$1}");
+            
+            const flds = QTextUtils.parseTextFields(s, pattern2, { });
+            const flds2 = {
+                yyyy: flds.yyyy,
+                mm: flds.mm,
+                dd: flds.dd,
+                HH: flds.HH,
+                MM: flds.MM,
+                SS: flds.SS,
+                sss: flds.sss,
+                Z: flds.Z
+            };
+            if ((flds.yy) || (flds.yy === 0)) {
+                flds2.yyyy = flds.yy + QDateUtils.CENTURY_BASE;
+            }
+            if ((flds.mmm) || (flds.mmmm)) {
+                if (flds.mmmm) {
+                    flds2.mm = this.monthNames.indexOf(flds.mmmm) + 1;
+                } else {
+                    flds2.mm = this.shortMonthNames.indexOf(flds.mmm) + 1;
+                }
+            } else if ((flds.m) || (flds.m === 0)) {
+                flds2.mm = flds.m;
+            }
+            if ((flds.d) || (flds.d === 0)) {
+                flds2.dd = flds.d;
+            }
+            if ((flds.H) || (flds.H === 0)) {
+                flds2.HH = flds.H;
+            }
+            if ((flds.M) || (flds.M === 0)) {
+                flds2.MM = flds.M;
+            }
+            if ((flds.S) || (flds.S === 0)) {
+                flds2.SS = flds.S;
+            }
+            if ((flds.ss) || (flds.ss === 0)) {
+                flds2.sss = flds.ss;
+            } else if ((flds.s) || (flds.s === 0)) {
+                flds2.sss = flds.s;
+            } 
+    
+            let t = new Date(flds2.yyyy || QDateUtils.CENTURY_BASE,
+                ((flds2.mm) || (flds2.mm === 0)) ? flds2.mm - 1 : 0,
+                ((flds2.dd) || (flds2.dd === 0)) ? flds2.dd : 1,
+                flds2.HH || 0, flds2.MM || 0, flds2.SS || 0, flds2.sss || 0);
+            //TODO: Revise this later
+            let localTzOffs = -t.getTimezoneOffset();
+            let tzOffs = ((flds2.Z) || (flds2.Z === 0))
+                ? parseTimeZoneOffset(flds2.Z)
+                : (((opts.timeZoneOffset) || (opts.timeZoneOffset === 0))
+                    ? opts.timeZoneOffset
+                    : this.timeZoneOffset);
+            if ((tzOffs) || (tzOffs === 0)) {
+                t = new Date(t.setUTCMinutes(t.getUTCMinutes() - tzOffs + localTzOffs));
+                t.forTimeZone = tzOffs;
+            }
+            t = checkCorrectEra(t, era);
+            t.granularity = getGranularity(flds2);
 
-      let t = new Date(flds2.yyyy || QDateUtils.CENTURY_BASE, flds2.mm || flds2.mm === 0 ? flds2.mm - 1 : 0, flds2.dd || flds2.dd === 0 ? flds2.dd : 1, flds2.HH || 0, flds2.MM || 0, flds2.SS || 0, flds2.sss || 0); //TODO: Revise this later
+            return t;
+        }
 
-      let localTzOffs = -t.getTimezoneOffset();
-      let tzOffs = flds2.Z || flds2.Z === 0 ? parseTimeZoneOffset(flds2.Z) : opts.timeZoneOffset || opts.timeZoneOffset === 0 ? opts.timeZoneOffset : this.timeZoneOffset;
+        format(t, pattern, opts) {
+            opts = opts || {};
+            const tzOffs = ((opts.timeZoneOffset) || (opts.timeZoneOffset === 0))
+                ? opts.timeZoneOffset
+                : this.timeZoneOffset;
+            const era = opts.era || this.era;
+            let t2 = ((tzOffs) || (tzOffs === 0))
+                ? new Date(t.setUTCMinutes(t.getUTCMinutes() + tzOffs))
+                : t;
+            t2 = checkCorrectEra(t2, era);
+            if (!pattern) {
+                return this._fullFmt.format(t2);
+            }
 
-      if (tzOffs || tzOffs === 0) {
-        t = new Date(t.setUTCMinutes(t.getUTCMinutes() - tzOffs + localTzOffs));
-        t.forTimeZone = tzOffs;
-      }
+            const pattern2 = pattern.replace(/(yyyy|yy|mmmm|mmm|mm|m|wwww|www|w|dd|d|HH|H|MM|M|SS|S|sss|s|Z)/g, "$${$1}");
+            const dtFlds =  {
+                yyyy: t2.getUTCFullYear(),
+                yy: t2.getUTCYear(),
+                m: t2.getUTCMonth() + 1,
+                w: t2.getDay(),
+                d: t2.getUTCDate(),
+                H: t2.getUTCHours(),
+                M: t2.getUTCMinutes(),
+                S: t2.getUTCSeconds(),
+                s: t2.getUTCMilliseconds()
+            };
+            dtFlds.mm = `0${dtFlds.m}`.slice(-2);
+            dtFlds.www = this.shortDowNames[dtFlds.w];
+            dtFlds.wwww = this.dowNames[dtFlds.w];
+            dtFlds.mmm = this.shortMonthNames[dtFlds.m - 1];
+            dtFlds.mmmm = this.monthNames[dtFlds.m - 1];
+            dtFlds.dd = `0${dtFlds.d}`.slice(-2);
+            dtFlds.HH = `0${dtFlds.H}`.slice(-2);
+            dtFlds.MM = `0${dtFlds.M}`.slice(-2);
+            dtFlds.S = `0${dtFlds.S}`.slice(-2);
+            dtFlds.sss = `00${dtFlds.s}`.slice(-3);
+            dtFlds.Z = `${(tzOffs >= 0) ? "+" : "-"}` + `000${Math.abs(tzOffs)}`.slice(-4);
 
-      t = checkCorrectEra(t, era);
-      t.granularity = getGranularity(flds2);
-      return t;
+            return QTextUtils.renderTemplate(pattern2, dtFlds);
+        }
+    }
+    LocalCalendar.CalendarsMap = {};
+    LocalCalendar.CHRISTIANS_ERA = "AD";
+    LocalCalendar.BUDDHISTS_ERA = "BE";
+    LocalCalendar.BE_THRESHOLD = 2500;
+    LocalCalendar.BE_OFFSET = 543;
+
+    class Duration {
+        constructor(dt) {
+            //this.years = 0;
+            //this.months = 0;
+            this.days = 0;
+            this.rawHours = 0;
+            this.hours = 0;
+            this.minutes = 0;
+            this.seconds = 0;
+            this.millis = 0;
+            this.rawMillis = 0;
+            this.update(dt);
+        } 
+        
+        update(dt) {
+            if (typeof dt === "number") {
+                this.rawMillis = this.millis = dt;
+            } else {
+                QUtils.merge(this, dt, { deep: true });
+                this.recalculateRawMillis();
+            }
+            this.normalize();
+            return this;
+        }
+        recalculateRawMillis() {
+            this.rawMillis = (((this.days*24 + this.hours)*60 + this.minutes)*60 + this.seconds)*1000 + this.millis;
+            return this;
+        }
+        normalize() {
+            let x = this.millis;
+            this.millis = x%1000;
+            x = Math.round((x - this.millis)/1000);
+            this.seconds = (this.seconds + x)%60;
+            x = Math.round((x - this.seconds)/60);
+            this.minutes = (this.minutes + x)%60;
+            x = Math.round((x - this.minutes)/60);
+            this.rawHours = this.hours + x;
+            this.hours = this.rawHours%24;
+            x = Math.round((x - this.hours)/24);
+            this.days = this.days + x;
+
+            return this;
+        }
     }
 
-    format(t, pattern, opts) {
-      opts = opts || {};
-      const tzOffs = opts.timeZoneOffset || opts.timeZoneOffset === 0 ? opts.timeZoneOffset : this.timeZoneOffset;
-      const era = opts.era || this.era;
-      let t2 = tzOffs || tzOffs === 0 ? new Date(t.setUTCMinutes(t.getUTCMinutes() + tzOffs)) : t;
-      t2 = checkCorrectEra(t2, era);
-
-      if (!pattern) {
-        return this._fullFmt.format(t2);
-      }
-
-      const pattern2 = pattern.replace(/(yyyy|yy|mmmm|mmm|mm|m|wwww|www|w|dd|d|HH|H|MM|M|SS|S|sss|s|Z)/g, "$${$1}");
-      const dtFlds = {
-        yyyy: t2.getUTCFullYear(),
-        yy: t2.getUTCYear(),
-        m: t2.getUTCMonth() + 1,
-        w: t2.getDay(),
-        d: t2.getUTCDate(),
-        H: t2.getUTCHours(),
-        M: t2.getUTCMinutes(),
-        S: t2.getUTCSeconds(),
-        s: t2.getUTCMilliseconds()
-      };
-      dtFlds.mm = `0${dtFlds.m}`.slice(-2);
-      dtFlds.www = this.shortDowNames[dtFlds.w];
-      dtFlds.wwww = this.dowNames[dtFlds.w];
-      dtFlds.mmm = this.shortMonthNames[dtFlds.m - 1];
-      dtFlds.mmmm = this.monthNames[dtFlds.m - 1];
-      dtFlds.dd = `0${dtFlds.d}`.slice(-2);
-      dtFlds.HH = `0${dtFlds.H}`.slice(-2);
-      dtFlds.MM = `0${dtFlds.M}`.slice(-2);
-      dtFlds.S = `0${dtFlds.S}`.slice(-2);
-      dtFlds.sss = `00${dtFlds.s}`.slice(-3);
-      dtFlds.Z = `${tzOffs >= 0 ? "+" : "-"}` + `000${Math.abs(tzOffs)}`.slice(-4);
-      return _qwizTextUtils.default.renderTemplate(pattern2, dtFlds);
-    }
-
-  }
-
-  LocalCalendar.CalendarsMap = {};
-  LocalCalendar.CHRISTIANS_ERA = "AD";
-  LocalCalendar.BUDDHISTS_ERA = "BE";
-  LocalCalendar.BE_THRESHOLD = 2500;
-  LocalCalendar.BE_OFFSET = 543;
-
-  class Duration {
-    constructor(dt) {
-      //this.years = 0;
-      //this.months = 0;
-      this.days = 0;
-      this.rawHours = 0;
-      this.hours = 0;
-      this.minutes = 0;
-      this.seconds = 0;
-      this.millis = 0;
-      this.rawMillis = 0;
-      this.update(dt);
-    }
-
-    update(dt) {
-      if (typeof dt === "number") {
-        this.rawMillis = this.millis = dt;
-      } else {
-        _qwizUtils.default.merge(this, dt, {
-          deep: true
+    /**
+     * @param {Date} dt 
+     * @param {String} targetEra 
+     * @param {Object} opts 
+     */
+    function checkCorrectEra(t, targetEra, opts) {
+        opts = opts || {};
+        targetEra = targetEra || checkCorrectEra.DEFAULT_ERA;
+        let t2;
+        let yyyy = t.getUTCFullYear();
+        if (yyyy >= LocalCalendar.BE_THRESHOLD) {
+            if (targetEra === LocalCalendar.CHRISTIANS_ERA) {
+                yyyy -= LocalCalendar.BE_OFFSET;
+            }
+        } else {
+            if (targetEra === LocalCalendar.BUDDHISTS_ERA) {
+                yyyy += LocalCalendar.BE_OFFSET;
+            }
+        }
+        t2 = new Date(t.setUTCFullYear(yyyy)); //new Date(t.getTime())
+        QUtils.merge(t2, {
+            forTimeZone: t.forTimeZone,
+            granularity: t.granularity
         });
 
-        this.recalculateRawMillis();
-      }
+        return t2;
+    }
+    checkCorrectEra.DEFAULT_ERA = LocalCalendar.CHRISTIANS_ERA;
 
-      this.normalize();
-      return this;
+    function getGranularity(flds) {
+        let gran = null;
+
+        for (let k of ["yyyy","mm","dd","HH", "MM", "SS", "sss"]) {
+            let fld = flds[k];
+            if ((!fld) && (fld !== 0)) {
+                break;
+            }
+            gran = getGranularity.FLDS_MAP[k];
+        }
+
+        return gran;
+    }
+    getGranularity.FLDS_MAP = {
+        "yyyy": QDateUtils.Granularities.YEARS,
+        "mm": QDateUtils.Granularities.MONTHS,
+        "dd": QDateUtils.Granularities.DAYS,
+        "HH": QDateUtils.Granularities.HOURS,
+        "MM": QDateUtils.Granularities.MINUTES,
+        "SS": QDateUtils.Granularities.SECONDS,
+        "sss": QDateUtils.Granularities.MILLISECS
+    };
+
+    function parseTimeZoneOffset(tz) {
+        if ((!tz) && (tz !== 0)) {
+            return null;
+        }
+        if (typeof tz === "number") {
+            return tz;
+        }
+        const matches = QDateUtils.ISO_TIMEZONE_PATTERN.exec(tz);
+        if (matches.length < 2) {
+            return null;
+        }
+
+        const tzFlds = {};
+        const n = QDateUtils.ISO_TIMEZONE_GROUPS_MAP.length;
+        for (let i=0;i < n;i++) {
+            let tuple = QDateUtils.ISO_TIMEZONE_GROUPS_MAP[i];
+            let gID = tuple[0];
+            let gName = tuple[1];
+            if (gID >= matches.length) {
+                break;
+            }
+            tzFlds[gName] = matches[gID];
+        }
+
+        return (tzFlds.TzHrs)
+            ? ((tzFlds.TzSign === "-") ? -1 : 1)*(tzFlds.TzHrs*60 + (tzFlds.TzMins*1 || 0))
+            : 0;
+    }
+    /*
+    function isISODateString(s) {
+        return QDateUtils.ISO_DATE_PATTERN.test(s);
+    }
+    */
+    function isISODateTimeString(s) {
+        return QDateUtils.ISO_DATETIME_PATTERN.test(s);
+    }
+    function parseISODateTime(src, opts) {
+        opts = opts || {};
+
+        const flds = {};
+        const matches = QDateUtils.ISO_DATETIME_PATTERN.exec(src);
+        if (matches.length < 3) {
+            return null;
+        }
+
+        const n = QDateUtils.ISO_DATETIME_GROUPS_MAP.length;
+        for (let i = 0;i < n;i++) {
+            let tuple = QDateUtils.ISO_DATETIME_GROUPS_MAP[i];
+            let gID = tuple[0];
+            let gName = tuple[1];
+            if (gID >= matches.length) {
+                break;
+            }
+            let val = matches[gID];
+            (typeof val !== "undefined") && (val !== null) && (!isNaN(val)) && (val = 1*val);
+            flds[gName] = val;
+        }
+        
+        let dt;
+        dt = new Date(flds.yyyy, ((flds.mm) && (flds.mm >= 1)) ? flds.mm - 1 : 0, flds.dd || 1,
+            flds.HH || 0, flds.MM || 0, flds.SS || 0, flds.sss || 0);
+        //TODO: Revise this later
+        let localTzOffs = -dt.getTimezoneOffset();
+        let tzOffs = ((flds.TzHrs) || (flds.TzHrs === 0))
+            ? ((flds.TzSign === "-") ? -1 : 1)*(flds.TzHrs*60 + (flds.TzMins || 0))
+            : opts.timeZoneOffset;
+        if ((tzOffs) || (tzOffs === 0)) {
+            dt = new Date(dt.setUTCMinutes(dt.getUTCMinutes() - tzOffs + localTzOffs));
+            dt.forTimeZone = tzOffs;
+        }
+        dt = checkCorrectEra(dt, LocalCalendar.CHRISTIANS_ERA);
+        dt.granularity = getGranularity(flds);
+
+        return dt;
     }
 
-    recalculateRawMillis() {
-      this.rawMillis = (((this.days * 24 + this.hours) * 60 + this.minutes) * 60 + this.seconds) * 1000 + this.millis;
-      return this;
+    function parseDateTime(src, opts) {
+        opts = opts || {};
+        if ((!src) && (src !== 0)) {
+            return null;
+        }
+        if (src instanceof Date) {
+            return src;
+        }
+        if (typeof src === "number") {
+            return new Date(src);
+        }
+        if ((!opts.pattern) && (isISODateTimeString(src))) {
+            return parseISODateTime(src, { });
+        }
+        const cal = LocalCalendar.get(opts.locale, {
+            timeZoneOffset: opts.timeZoneOffset,
+            era: opts.era
+        });
+
+        return cal.parse(src, opts.pattern || parseDateTime.DEFAULT_PATTERN, {
+            timeZoneOffset: opts.timeZoneOffset,
+            era: opts.era
+        });
+    }
+    parseDateTime.DEFAULT_PATTERN = "yyyy-mm-dd HH:MM:SS.sss";
+
+    function parseDateRange(from, to, opts) {
+        opts = opts || {};
+        let pattern = opts.pattern || parseDateTime.DEFAULT_PATTERN;
+
+        let fromDT = parseDateTime(from, { pattern: pattern });
+        let toDT = parseDateTime(to, { pattern: opts.pattern });
+        const toTZ = toDT.forTimeZone;
+        switch (toDT.granularity) {
+            case QDateUtils.Granularities.YEARS:
+                toDT = new Date(toDT.setUTCFullYear(toDT.getUTCFullYear() + 1));
+                toDT.forTimeZone = toTZ;
+                break;
+            case QDateUtils.Granularities.MONTHS:
+                toDT = new Date(toDT.setUTCMonth(toDT.getUTCMonth() + 1));
+                toDT.forTimeZone = toTZ;
+                break;
+            case QDateUtils.Granularities.DAYS:
+                toDT = new Date(toDT.setUTCDate(toDT.getUTCDate() + 1));
+                toDT.forTimeZone = toTZ;
+                break;
+            case QDateUtils.Granularities.HOURS:
+                toDT = new Date(toDT.setUTCHours(toDT.getUTCHours() + 1));
+                toDT.forTimeZone = toTZ;
+                break;
+            default:
+                break;
+        }
+
+        return [ fromDT, toDT ];
     }
 
-    normalize() {
-      let x = this.millis;
-      this.millis = x % 1000;
-      x = Math.round((x - this.millis) / 1000);
-      this.seconds = (this.seconds + x) % 60;
-      x = Math.round((x - this.seconds) / 60);
-      this.minutes = (this.minutes + x) % 60;
-      x = Math.round((x - this.minutes) / 60);
-      this.rawHours = this.hours + x;
-      this.hours = this.rawHours % 24;
-      x = Math.round((x - this.hours) / 24);
-      this.days = this.days + x;
-      return this;
+    function formatDateTime(t, opts) {
+        opts = opts || {};
+        const pattern = opts.pattern || formatDateTime.DEFAULT_PATTERN;
+        const cal = LocalCalendar.get(opts.locale, {
+            timeZoneOffset: opts.timeZoneOffset,
+            era: opts.era
+        });
+        
+        return cal.format(t, pattern, {
+            //TODO: Revise this later
+            timeZoneOffset: ((opts.timeZoneOffset) || (opts.timeZoneOffset === 0))
+                ? opts.timeZoneOffset
+                : -dt.getTimezoneOffset()
+        });
     }
+    formatDateTime.DEFAULT_PATTERN = "yyyy-mm-dd HH:MM:SS.sss";
 
-  }
-  /**
-   * @param {Date} dt 
-   * @param {String} targetEra 
-   * @param {Object} opts 
-   */
-
-
-  function checkCorrectEra(t, targetEra, opts) {
-    opts = opts || {};
-    targetEra = targetEra || checkCorrectEra.DEFAULT_ERA;
-    let t2;
-    let yyyy = t.getUTCFullYear();
-
-    if (yyyy >= LocalCalendar.BE_THRESHOLD) {
-      if (targetEra === LocalCalendar.CHRISTIANS_ERA) {
-        yyyy -= LocalCalendar.BE_OFFSET;
-      }
-    } else {
-      if (targetEra === LocalCalendar.BUDDHISTS_ERA) {
-        yyyy += LocalCalendar.BE_OFFSET;
-      }
+    function getDateDiff(t1, t2, opts) {
+        opts = opts || {};
+        
+        let dt = t2.getTime() - t1.getTime();
+        let duration = new Duration(dt);
+        
+        return duration;
     }
+    
+    function addDateOffset(t1, dt, opts) {
+        opts = opts || {};
+        let dt2 = (dt instanceof Duration)
+            ? dt
+            : new Duration(dt);
+        let t2 = new Date(t1.getTime() + dt2.rawMillis);
 
-    t2 = new Date(t.setUTCFullYear(yyyy)); //new Date(t.getTime())
-
-    _qwizUtils.default.merge(t2, {
-      forTimeZone: t.forTimeZone,
-      granularity: t.granularity
+        return t2;
+    }
+    
+    QUtils.merge(QDateUtils, {
+        LocalCalendar: LocalCalendar,
+        Duration: Duration,
+        checkCorrectEra: checkCorrectEra,
+        parseDateTime: parseDateTime,
+        parseDateRange: parseDateRange,
+        formatDateTime: formatDateTime,
+        getDateDiff: getDateDiff,
+        addDateOffset: addDateOffset
     });
 
-    return t2;
-  }
+    (_namespace) && QUtils.merge(_namespace, QDateUtils);
 
-  checkCorrectEra.DEFAULT_ERA = LocalCalendar.CHRISTIANS_ERA;
+    return QDateUtils;
+})( /*global.chakritw.qwiz.utils.datetime*/ );
 
-  function getGranularity(flds) {
-    let gran = null;
-
-    for (let k of ["yyyy", "mm", "dd", "HH", "MM", "SS", "sss"]) {
-      let fld = flds[k];
-
-      if (!fld && fld !== 0) {
-        break;
-      }
-
-      gran = getGranularity.FLDS_MAP[k];
-    }
-
-    return gran;
-  }
-
-  getGranularity.FLDS_MAP = {
-    "yyyy": QDateUtils.Granularities.YEARS,
-    "mm": QDateUtils.Granularities.MONTHS,
-    "dd": QDateUtils.Granularities.DAYS,
-    "HH": QDateUtils.Granularities.HOURS,
-    "MM": QDateUtils.Granularities.MINUTES,
-    "SS": QDateUtils.Granularities.SECONDS,
-    "sss": QDateUtils.Granularities.MILLISECS
-  };
-
-  function parseTimeZoneOffset(tz) {
-    if (!tz && tz !== 0) {
-      return null;
-    }
-
-    if (typeof tz === "number") {
-      return tz;
-    }
-
-    const matches = QDateUtils.ISO_TIMEZONE_PATTERN.exec(tz);
-
-    if (matches.length < 2) {
-      return null;
-    }
-
-    const tzFlds = {};
-    const n = QDateUtils.ISO_TIMEZONE_GROUPS_MAP.length;
-
-    for (let i = 0; i < n; i++) {
-      let tuple = QDateUtils.ISO_TIMEZONE_GROUPS_MAP[i];
-      let gID = tuple[0];
-      let gName = tuple[1];
-
-      if (gID >= matches.length) {
-        break;
-      }
-
-      tzFlds[gName] = matches[gID];
-    }
-
-    return tzFlds.TzHrs ? (tzFlds.TzSign === "-" ? -1 : 1) * (tzFlds.TzHrs * 60 + (tzFlds.TzMins * 1 || 0)) : 0;
-  }
-  /*
-  function isISODateString(s) {
-      return QDateUtils.ISO_DATE_PATTERN.test(s);
-  }
-  */
-
-
-  function isISODateTimeString(s) {
-    return QDateUtils.ISO_DATETIME_PATTERN.test(s);
-  }
-
-  function parseISODateTime(src, opts) {
-    opts = opts || {};
-    const flds = {};
-    const matches = QDateUtils.ISO_DATETIME_PATTERN.exec(src);
-
-    if (matches.length < 3) {
-      return null;
-    }
-
-    const n = QDateUtils.ISO_DATETIME_GROUPS_MAP.length;
-
-    for (let i = 0; i < n; i++) {
-      let tuple = QDateUtils.ISO_DATETIME_GROUPS_MAP[i];
-      let gID = tuple[0];
-      let gName = tuple[1];
-
-      if (gID >= matches.length) {
-        break;
-      }
-
-      let val = matches[gID];
-      typeof val !== "undefined" && val !== null && !isNaN(val) && (val = 1 * val);
-      flds[gName] = val;
-    }
-
-    let dt;
-    dt = new Date(flds.yyyy, flds.mm && flds.mm >= 1 ? flds.mm - 1 : 0, flds.dd || 1, flds.HH || 0, flds.MM || 0, flds.SS || 0, flds.sss || 0); //TODO: Revise this later
-
-    let localTzOffs = -dt.getTimezoneOffset();
-    let tzOffs = flds.TzHrs || flds.TzHrs === 0 ? (flds.TzSign === "-" ? -1 : 1) * (flds.TzHrs * 60 + (flds.TzMins || 0)) : opts.timeZoneOffset;
-
-    if (tzOffs || tzOffs === 0) {
-      dt = new Date(dt.setUTCMinutes(dt.getUTCMinutes() - tzOffs + localTzOffs));
-      dt.forTimeZone = tzOffs;
-    }
-
-    dt = checkCorrectEra(dt, LocalCalendar.CHRISTIANS_ERA);
-    dt.granularity = getGranularity(flds);
-    return dt;
-  }
-
-  function parseDateTime(src, opts) {
-    opts = opts || {};
-
-    if (!src && src !== 0) {
-      return null;
-    }
-
-    if (src instanceof Date) {
-      return src;
-    }
-
-    if (typeof src === "number") {
-      return new Date(src);
-    }
-
-    if (!opts.pattern && isISODateTimeString(src)) {
-      return parseISODateTime(src, {});
-    }
-
-    const cal = LocalCalendar.get(opts.locale, {
-      timeZoneOffset: opts.timeZoneOffset,
-      era: opts.era
-    });
-    return cal.parse(src, opts.pattern || parseDateTime.DEFAULT_PATTERN, {
-      timeZoneOffset: opts.timeZoneOffset,
-      era: opts.era
-    });
-  }
-
-  parseDateTime.DEFAULT_PATTERN = "yyyy-mm-dd HH:MM:SS.sss";
-
-  function parseDateRange(from, to, opts) {
-    opts = opts || {};
-    let pattern = opts.pattern || parseDateTime.DEFAULT_PATTERN;
-    let fromDT = parseDateTime(from, {
-      pattern: pattern
-    });
-    let toDT = parseDateTime(to, {
-      pattern: opts.pattern
-    });
-    const toTZ = toDT.forTimeZone;
-
-    switch (toDT.granularity) {
-      case QDateUtils.Granularities.YEARS:
-        toDT = new Date(toDT.setUTCFullYear(toDT.getUTCFullYear() + 1));
-        toDT.forTimeZone = toTZ;
-        break;
-
-      case QDateUtils.Granularities.MONTHS:
-        toDT = new Date(toDT.setUTCMonth(toDT.getUTCMonth() + 1));
-        toDT.forTimeZone = toTZ;
-        break;
-
-      case QDateUtils.Granularities.DAYS:
-        toDT = new Date(toDT.setUTCDate(toDT.getUTCDate() + 1));
-        toDT.forTimeZone = toTZ;
-        break;
-
-      case QDateUtils.Granularities.HOURS:
-        toDT = new Date(toDT.setUTCHours(toDT.getUTCHours() + 1));
-        toDT.forTimeZone = toTZ;
-        break;
-
-      default:
-        break;
-    }
-
-    return [fromDT, toDT];
-  }
-
-  function formatDateTime(t, opts) {
-    opts = opts || {};
-    const pattern = opts.pattern || formatDateTime.DEFAULT_PATTERN;
-    const cal = LocalCalendar.get(opts.locale, {
-      timeZoneOffset: opts.timeZoneOffset,
-      era: opts.era
-    });
-    return cal.format(t, pattern, {
-      //TODO: Revise this later
-      timeZoneOffset: opts.timeZoneOffset || opts.timeZoneOffset === 0 ? opts.timeZoneOffset : -dt.getTimezoneOffset()
-    });
-  }
-
-  formatDateTime.DEFAULT_PATTERN = "yyyy-mm-dd HH:MM:SS.sss";
-
-  function getDateDiff(t1, t2, opts) {
-    opts = opts || {};
-    let dt = t2.getTime() - t1.getTime();
-    let duration = new Duration(dt);
-    return duration;
-  }
-
-  function addDateOffset(t1, dt, opts) {
-    opts = opts || {};
-    let dt2 = dt instanceof Duration ? dt : new Duration(dt);
-    let t2 = new Date(t1.getTime() + dt2.rawMillis);
-    return t2;
-  }
-
-  _qwizUtils.default.merge(QDateUtils, {
-    LocalCalendar: LocalCalendar,
-    Duration: Duration,
-    checkCorrectEra: checkCorrectEra,
-    parseDateTime: parseDateTime,
-    parseDateRange: parseDateRange,
-    formatDateTime: formatDateTime,
-    getDateDiff: getDateDiff,
-    addDateOffset: addDateOffset
-  });
-
-  _namespace && _qwizUtils.default.merge(_namespace, QDateUtils);
-  return QDateUtils;
-}();
-
-exports.default = _default;
-
-},{"./qwiz-text-utils":17,"./qwiz-utils":18,"intl":7}],17:[function(require,module,exports){
+},{"./qwiz-text-utils":16,"./qwiz-utils":17,"intl":7}],16:[function(require,module,exports){
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
+const debug = require("debug");
+const util = require("util");
+const QUtils = require("./qwiz-utils");
 
-var _qwizUtils = _interopRequireDefault(require("./qwiz-utils"));
+module.exports = (function(_namespace) {
+    const DEBUG_NS = "qwiz.utils";
+    const QTextUtils = {};
 
-var _vm = require("vm");
+    //Text util functions
+    function isNullOrEmpty(s) {
+        return (typeof s === "undefined") || (s === null) || (s === "");
+    }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+    function renderTemplate(tmpl, vars, opts) {
+        opts = opts || {};
+        let s = tmpl.replace(renderTemplate.EXPR_PATTERN, function (match, key) {
+            let val = QUtils.getPropByPath(vars, key, { delimiter: opts.pathDelimiter });
 
-//DEPRECATED
-//Namespaces
+            return ((val) || (val === 0) || (val === false)) ? val : "";
+        });
 
-/*
-var global = global || window;
-global.chakritw = global.chakritw || {};
-global.chakritw.qwiz = global.chakritw.qwiz || {};
-global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
-*/
-var _default = function (_namespace) {
-  const QTextUtils = {}; //Text util functions
+        return s;
+    }
+    renderTemplate.EXPR_PATTERN = /\$\{(\S+?)\}/g;
 
-  function isNullOrEmpty(s) {
-    return typeof s === "undefined" || s === null || s === "";
-  }
+    class TextFieldsParser {
+        constructor(pattern, opts) {
+            this.pattern = pattern;
+            this.tokens = [];
+            (opts) && QUtils.merge(this, opts, { deep: true });
+            this.rebuild();
+        }
+        addToken(prefix, key, suffix) {
+            let token = {
+                prefix: prefix,
+                key: key,
+                suffix: suffix
+            };
+            this.tokens.push(token);
 
-  function renderTemplate(tmpl, vars, opts) {
-    opts = opts || {};
-    let s = tmpl.replace(renderTemplate.EXPR_PATTERN, function (match, key) {
-      let val = _qwizUtils.default.getPropByPath(vars, key, {
-        delimiter: opts.pathDelimiter
-      });
+            return token;
+        }
+        rebuild() {
+            const regex = new RegExp(renderTemplate.EXPR_PATTERN.source, renderTemplate.EXPR_PATTERN.flags);
+            this.tokens.length = 0;
+            let matches;
+            let k1 = 0;
+            let i = 0;
+            let lastToken;
+            while ((matches = regex.exec(this.pattern)) !== null) {
+                let dk = matches[0].length;
+                let k = regex.lastIndex - dk;
+                let prefix = this.pattern.substring(k1, k);
+                let key = matches[1];
+                (lastToken) && (lastToken.suffix = prefix);
+                lastToken = this.addToken(prefix, key);
+                k1 = regex.lastIndex;
+                i++;
+            }
+            if (k1 < this.pattern.length) {
+                //let lastToken = (this.tokens.length >= 1) ? this.tokens[this.tokens.length - 1] : null;
+                if (lastToken) {
+                    lastToken.suffix = this.pattern.substring(k1, this.pattern.length);
+                }
+            }
+        }
+        parseText(text) {
+            const flds = {};
+            if ((!text) && (text !== 0)) {
+                return flds;
+            }
+            const n = this.tokens.length;
+            let k1 = 0;
+            for (let i = 0;i < n;i++) {
+                let token = this.tokens[i];
+                let preLen = (!isNullOrEmpty(token.prefix)) ? token.prefix.length : 0;
+                let sufLen = (!isNullOrEmpty(token.suffix)) ? token.suffix.length : 0;
+                if ((!isNullOrEmpty(token.prefix))
+                    && (text.substring(k1, k1 + preLen) !== token.prefix))
+                {
+                    break;
+                }
+                let k2 = (!isNullOrEmpty(token.suffix))
+                    ? k1 + preLen + text.substring(k1 + preLen).indexOf(token.suffix)
+                    : text.length;
+                if (k2 < 0) {
+                    break;
+                }
+                let fldVal = text.substring(k1 + preLen, k2);
+                QUtils.setPropByPath(flds, token.key, fldVal);
+                k1 = k2; //+ sufLen;
+            }
+            debug(DEBUG_NS)(`Parsed fields from text: ${text} : ${this.pattern} => ${util.inspect(flds)}`);
 
-      return val || val === 0 || val === false ? val : "";
+            return flds;
+        }
+    }
+    function parseTextFields(text, pattern, opts) {
+        return new TextFieldsParser(pattern, opts).parseText(text);
+    }
+    //parseTextFields.TextFieldsParser = TextFieldsParser;
+
+    function safeSerializeJSON(obj, opts) {
+        opts = opts || {};
+        let obj2 = QUtils.createEmptyCopy(obj);
+        QUtils.walkObject(obj, {
+            maxDepth: opts.maxDepth,
+            includesList: opts.includesList,
+            excludesList: opts.excludesList,
+            protoLimit: opts.protoLimit,
+            target: obj2,
+            onDefault: function (val, ctx) {
+                if (ctx.isCircularRef) {
+                    return null;
+                }
+                if (!ctx.isLeaf) {
+                    return;
+                }
+
+                return val;
+            }
+        });
+        
+        return JSON.stringify(obj2);
+    }
+        
+    function getURL(baseURL, path, query) {
+        let parts = ((baseURL) || (baseURL === 0))
+            ? [ baseURL ]
+            : [];
+        if (Array.isArray(path)) {
+            parts = parts.concat(path)
+        } else {
+            parts.push(path);
+        }
+        
+        let parts2 = [];
+        let i = 0;
+        //let nParts = parts.length;
+        parts.forEach((part) => {
+            if ((!part) && (part !== 0)) {
+                return false;
+            }
+            let part2 = `${part}`;
+            (i > 0) && (part2 = part2.replace(/(^\/)/, ""));
+            ((i > 0) || (part2 !== "/")) && (part2 = part2.replace(/(\/$)/, ""));
+            if (part2.length <= 0) {
+                return false;
+            }
+            parts2.push(part2);
+            i++;
+        });
+
+        let parts3 = [ parts2.join("/") ];
+        let nQPairs = 0;
+        (query) && QUtils.forEachField(query, (k, v) => {
+            parts3.push((nQPairs <= 0) ? "?" : "&");
+            parts3.push(encodeURIComponent(k));
+            parts3.push("=");
+            parts3.push(encodeURIComponent(v));
+            nQPairs++;
+        });
+
+        return parts3.join("");
+    }
+    function getQuery(queryString) {
+        const query = {};
+        const pairs = ((queryString[0] === '?') ? queryString.substr(1) : queryString).split('&');
+        for (var i = 0; i < pairs.length; i++) {
+            var pair = pairs[i].split('=');
+            query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        }
+
+        return query;
+    }
+    
+    QUtils.merge(QTextUtils, {
+        isNullOrEmpty: isNullOrEmpty,
+        renderTemplate: renderTemplate,
+        TextFieldsParser: TextFieldsParser,
+        parseTextFields: parseTextFields,
+        safeSerializeJSON: safeSerializeJSON,
+        getURL: getURL,
+        getQuery: getQuery
     });
-    return s;
-  }
 
-  renderTemplate.EXPR_PATTERN = /\$\{(\S+?)\}/g;
+    (_namespace) && QUtils.merge(_namespace, QTextUtils);
 
-  class TextFieldsParser {
-    constructor(pattern, opts) {
-      this.pattern = pattern;
-      this.tokens = [];
-      opts && _qwizUtils.default.merge(this, opts, {
-        deep: true
-      });
-      this.rebuild();
-    }
+    return QTextUtils;
+})( /*global.chakritw.qwiz.utils.text*/ );
 
-    addToken(prefix, key, suffix) {
-      let token = {
-        prefix: prefix,
-        key: key,
-        suffix: suffix
-      };
-      this.tokens.push(token);
-      return token;
-    }
-
-    rebuild() {
-      const regex = new RegExp(renderTemplate.EXPR_PATTERN.source, renderTemplate.EXPR_PATTERN.flags);
-      this.tokens.length = 0;
-      let matches;
-      let k1 = 0;
-      let i = 0;
-      let lastToken;
-
-      while ((matches = regex.exec(this.pattern)) !== null) {
-        let dk = matches[0].length;
-        let k = regex.lastIndex - dk;
-        let prefix = this.pattern.substring(k1, k);
-        let key = matches[1];
-        lastToken && (lastToken.suffix = prefix);
-        lastToken = this.addToken(prefix, key);
-        k1 = regex.lastIndex;
-        i++;
-      }
-
-      if (k1 < this.pattern.length) {
-        //let lastToken = (this.tokens.length >= 1) ? this.tokens[this.tokens.length - 1] : null;
-        if (lastToken) {
-          lastToken.suffix = this.pattern.substring(k1, this.pattern.length);
-        }
-      }
-    }
-
-    parseText(text) {
-      const flds = {};
-
-      if (!text && text !== 0) {
-        return flds;
-      }
-
-      const n = this.tokens.length;
-      let k1 = 0;
-
-      for (let i = 0; i < n; i++) {
-        let token = this.tokens[i];
-        let preLen = !isNullOrEmpty(token.prefix) ? token.prefix.length : 0;
-        let sufLen = !isNullOrEmpty(token.suffix) ? token.suffix.length : 0;
-
-        if (!isNullOrEmpty(token.prefix) && text.substring(k1, k1 + preLen) !== token.prefix) {
-          break;
-        }
-
-        let k2 = !isNullOrEmpty(token.suffix) ? k1 + preLen + text.substring(k1 + preLen).indexOf(token.suffix) : text.length;
-
-        if (k2 < 0) {
-          break;
-        }
-
-        let fldVal = text.substring(k1 + preLen, k2);
-
-        _qwizUtils.default.setPropByPath(flds, token.key, fldVal);
-
-        k1 = k2; //+ sufLen;
-      }
-
-      return flds;
-    }
-
-  }
-
-  function parseTextFields(text, pattern, opts) {
-    return new TextFieldsParser(pattern, opts).parseText(text);
-  } //parseTextFields.TextFieldsParser = TextFieldsParser;
-
-
-  function safeSerializeJSON(obj, opts) {
-    opts = opts || {};
-
-    let obj2 = _qwizUtils.default.createEmptyCopy(obj);
-
-    _qwizUtils.default.walkObject(obj, {
-      maxDepth: opts.maxDepth,
-      includesList: opts.includesList,
-      excludesList: opts.excludesList,
-      protoLimit: opts.protoLimit,
-      target: obj2,
-      onDefault: function (val, ctx) {
-        if (ctx.isCircularRef) {
-          return null;
-        }
-
-        if (!ctx.isLeaf) {
-          return;
-        }
-
-        return val;
-      }
-    });
-
-    return JSON.stringify(obj2);
-  }
-
-  function getURL(baseURL, path, query) {
-    let parts = baseURL || baseURL === 0 ? [baseURL] : [];
-
-    if (Array.isArray(path)) {
-      parts = parts.concat(path);
-    } else {
-      parts.push(path);
-    }
-
-    let parts2 = [];
-    let i = 0; //let nParts = parts.length;
-
-    parts.forEach(part => {
-      if (!part && part !== 0) {
-        return false;
-      }
-
-      let part2 = `${part}`;
-      i > 0 && (part2 = part2.replace(/(^\/)/, ""));
-      (i > 0 || part2 !== "/") && (part2 = part2.replace(/(\/$)/, ""));
-
-      if (part2.length <= 0) {
-        return false;
-      }
-
-      parts2.push(part2);
-      i++;
-    });
-    let parts3 = [parts2.join("/")];
-    let nQPairs = 0;
-    query && _qwizUtils.default.forEachField(query, (k, v) => {
-      parts3.push(nQPairs <= 0 ? "?" : "&");
-      parts3.push(encodeURIComponent(k));
-      parts3.push("=");
-      parts3.push(encodeURIComponent(v));
-      nQPairs++;
-    });
-    return parts3.join("");
-  }
-
-  function getQuery(queryString) {
-    const query = {};
-    const pairs = (queryString[0] === '?' ? queryString.substr(1) : queryString).split('&');
-
-    for (var i = 0; i < pairs.length; i++) {
-      var pair = pairs[i].split('=');
-      query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
-    }
-
-    return query;
-  }
-
-  _qwizUtils.default.merge(QTextUtils, {
-    isNullOrEmpty: isNullOrEmpty,
-    renderTemplate: renderTemplate,
-    TextFieldsParser: TextFieldsParser,
-    parseTextFields: parseTextFields,
-    safeSerializeJSON: safeSerializeJSON,
-    getURL: getURL,
-    getQuery: getQuery
-  });
-
-  _namespace && _qwizUtils.default.merge(_namespace, QTextUtils);
-  return QTextUtils;
-}();
-
-exports.default = _default;
-
-},{"./qwiz-utils":18,"vm":14}],18:[function(require,module,exports){
+},{"./qwiz-utils":17,"debug":3,"util":13}],17:[function(require,module,exports){
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _debug = _interopRequireDefault(require("debug"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+const debug = require("debug");
 
 //Global namespaces
-var window = window || function _DummyWindow() {
-  function _DummyNode(tagName) {
-    this.tagName = tagName;
-  }
-
-  _DummyNode.prototype = {
-    constructor: _DummyNode
-  };
-
-  function _DummyDocument() {}
-
-  _DummyDocument.prototype = {
-    constructor: _DummyDocument,
-    createElement: function (tagName) {
-      return new _DummyNode(tagName);
+var window = window || (function _DummyWindow() {
+    function _DummyNode(tagName) {
+        this.tagName = tagName;
     }
-  };
-  return {
-    Node: _DummyNode,
-    HTMLDocument: _DummyDocument,
-    Window: _DummyWindow
-  };
-}();
-
-var global = global || window; //DEPRECATED
-//Namespaces
-
-/*
-global.chakritw = global.chakritw || {};
-global.chakritw.qwiz = global.chakritw.qwiz || {};
-global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
-*/
-
-var _default = function (_namespace) {
-  const QUtils = {};
-  const DEBUG_NS = "qwiz.utils"; //Base util functions
-
-  /**
-   * forEachField: Simple iteration over object fields
-   * @param {Object} obj
-   * @param {Function<String, *>} callback
-   * @param {Object} opts 
-   */
-
-  function forEachField(obj, callback, opts) {
-    opts = opts || {};
-    const protoLimit = opts.prototypeLimit || Object.prototype;
-    const inclSet = new Set(opts.includesList);
-    let exclList = ["constructor", "__prototype__", "_class", "_super"];
-    opts.excludesList && (exclList = exclList.concat(opts.excludesList));
-    const exclSet = new Set(exclList);
-
-    function _next(k, v) {
-      return callback(k, v);
+    _DummyNode.prototype = { constructor: _DummyNode }
+    function _DummyDocument() {
     }
-
-    if (Array.isArray(obj)) {
-      let n = obj.length;
-
-      for (let i = 0; i < n; i++) {
-        let proceed = _next(i, obj[i]);
-
-        if (typeof proceed !== "undefined" && !proceed) {
-          break;
+    _DummyDocument.prototype = {
+        constructor: _DummyDocument,
+        createElement: function (tagName) {
+            return new _DummyNode(tagName);
         }
-      }
-    } else {
-      for (let key in obj) {
-        if (exclSet.has(key)) {
-          continue;
-        }
-
-        if (!Object.prototype.hasOwnProperty.call(obj, key) && !inclSet.has(key)) {
-          let foundInLimit = false;
-          let objProto = obj.__prototype__ || obj.constructor.prototype;
-
-          while (objProto && typeof objProto === "object") {
-            if (objProto === protoLimit) {
-              break;
-            }
-
-            if (Object.prototype.hasOwnProperty.call(objProto, key)) {
-              foundInLimit = true;
-              break;
-            }
-
-            objProto = objProto.__prototype__ || objProto.constructor.prototype;
-          }
-
-          if (!foundInLimit) {
-            continue;
-          }
-        }
-
-        let proceed = _next(key, obj[key]);
-
-        if (typeof proceed !== "undefined" && !proceed) {
-          break;
-        }
-      }
-    }
-
-    return this;
-  }
-  /**
-   * Get object property by path
-   * @param {Object} obj
-   * @param {String|Array} path
-   */
-
-
-  function getPropByPath(obj, path, opts) {
-    opts = opts || {};
-    const delim = opts.delimiter || getPropByPath.DEFAULT_DELIMITER;
-
-    if (!Array.isArray(path)) {
-      path = `${path}`.split(delim);
-    }
-
-    let prop = obj;
-    let n = path.length;
-
-    for (let i = 0; i < n; i++) {
-      let key = path[i];
-      let valid = key || key === 0;
-      valid = valid && typeof prop !== "undefined" && prop !== null;
-
-      if (!valid) {
-        if (i + 1 < n) {
-          prop = undefined;
-        }
-
-        break;
-      }
-
-      prop = prop[key];
-    }
-
-    return prop;
-  }
-
-  getPropByPath.DEFAULT_DELIMITER = ".";
-  /**
-   * Set object property by path
-   * @param {Object} obj
-   * @param {String|Array} path
-   */
-
-  function setPropByPath(obj, path, val, opts) {
-    opts = opts || {};
-    const delim = opts.delimiter || setPropByPath.DEFAULT_DELIMITER;
-
-    if (!Array.isArray(path)) {
-      path = `${path}`.split(delim);
-    }
-
-    let prop = obj;
-    let n = path.length;
-
-    for (let i = 0; i < n; i++) {
-      let key = path[i];
-      let last = i + 1 >= n;
-      let valid = key || key === 0;
-      valid = valid && typeof prop !== "undefined" && prop !== null;
-
-      if (!valid) {
-        if (!last) {
-          prop = undefined;
-        }
-
-        break;
-      }
-
-      if (last) {
-        if (Array.isArray(prop) && !isNaN(key)) {
-          while (prop.length <= key) {
-            prop.push(null);
-          }
-
-          prop.push(val);
-        } else {
-          prop[key] = val;
-        }
-      } else {
-        prop = prop[key];
-      }
-    }
-
-    return prop;
-  }
-
-  setPropByPath.DEFAULT_DELIMITER = ".";
-  /**
-   * Creates object/array empty copy
-   * @param {Object} src 
-   */
-
-  function createEmptyCopy(src) {
-    if (!src) {
-      return {};
-    }
-
-    let target;
-
-    if (Array.isArray(src)) {
-      target = []; //new Array(src.length);
-    } else {
-      const srcProto = src.__prototype__ || src.constructor.prototype;
-      target = srcProto ? Object.create(srcProto) : {};
-    }
-
-    return target;
-  }
-
-  class ObjectIterationContext {
-    /**
-     * @param {Object} props
-     */
-    constructor(props) {
-      const ctx = this;
-      props && forEachField(props, (k, v) => {
-        typeof v !== "undefined" && (ctx[k] = v);
-      });
-      this.path = this.path || [];
-      this.depth = this.depth || 0;
-      this.isLeaf = this.isLeaf || false;
-      this.isCircularRef = this.isCircularRef || false;
-      this.stopped = this.stopped || false;
-      this.seenObjs = this.seenObjs instanceof Set ? this.seenObjs : new Set(this.seenObjs);
-      this.objectToTargetMappings = this.objectToTargetMappings || [];
-    }
-
-    setTargetValue(key, val) {
-      if (Array.isArray(this.target)) {
-        if (Array.isArray(val)) {
-          this.target = this.target.concat(val);
-        } else {
-          //TODO: Revise this later
-          for (let i = 0; i < key - this.target.length; i++) {
-            this.target.push(null);
-          }
-
-          this.target.push(val);
-        }
-      } else {
-        this.target[key] = val;
-      }
-
-      return this.target;
-    }
-
-    checkCreateTarget() {
-      if (!this.target) {
-        this.target = createEmptyCopy(this.currentObject);
-        this.addTargetMapping(this.currentObject, this.target);
-      }
-
-      return this.target;
-    }
-
-    getMappedTarget(src) {
-      if (!src || typeof src !== "object") {
-        return null;
-      }
-
-      let target = null;
-      this.objectToTargetMappings.forEach(entry => {
-        if (entry.src === src) {
-          target = entry.target; //break
-
-          return false;
-        }
-      });
-      return target;
-    }
-
-    addTargetMapping(src, target) {
-      this.objectToTargetMappings.push({
-        src: src,
-        target: target
-      });
-    }
-
-  }
-  /*
-  function ObjectIterationContext(props) {
-      const ctx = this;
-      (props) && forEachField(props, (k, v) => {
-          (typeof v !== "undefined") && (ctx[k] = v);
-      });
-      this.depth = this.depth || 0;
-      this.stopped = this.stopped || false;
-      this.path = this.path || [];
-      this.seenObjs = (this.seenObjs instanceof Set)
-          ? new Set(this.seenObjs)
-          : this.seenObjs;
-      this.objectToTargetMappings = this.objectToTargetMappings || [];
-  }
-  ObjectIterationContext.prototype = {
-      constructor: ObjectIterationContext,
-      rootObject: null,
-      currentObject: null,
-      path: null,
-      key: null,
-      fullKey: null,
-      arrayIdx: null,
-      depth: 0,
-      stopped: false,
-      seenObjs: null,
-      target: null,
-      objectToTargetMappings: null,
-      isLeaf: false,
-      isCircularRef: false,
-      lastError: null,
-       setTargetValue: function (key, val) {
-          if (Array.isArray(this.target)) {
-              if (Array.isArray(val)) {
-                  this.target = this.target.concat(val);
-              } else {
-                  //TODO: Revise this later
-                  for (let i = 0;i < key - this.target.length;i++) {
-                      this.target.push(null);
-                  }
-                  this.target.push(val);
-              }
-          } else {
-              this.target[key] = val;
-          }
-  
-          return this.target;
-      },
-      checkCreateTarget: function() {
-          if (!this.target) {
-              this.target = createEmptyCopy(this.currentObject);
-              this.addTargetMapping(this.currentObject, this.target);
-          }
-  
-          return this.target;
-      },
-      getMappedTarget: function (src) {
-          if ((!src) || (typeof src !== "object")) {
-              return null;
-          }
-          let target = null;
-          this.objectToTargetMappings.forEach((entry) => {
-              if (entry.src === src) {
-                  target = entry.target;
-                  //break
-                  return false;
-              }
-          });
-  
-          return target;
-      },
-      addTargetMapping: function (src, target) {
-          this.objectToTargetMappings.push({ src: src, target: target });
-      }
-  };
-  */
-
-  /**
-   * walkObject: Iteration through nested object tree to do expressions processing
-   * @param {Object} obj 
-   * @param {Object} opts 
-   */
-
-
-  function walkObject(obj, opts) {
-    opts = opts || {};
-    const beforeAllFn = typeof opts.onBeforeAll === "function" ? opts.onBeforeAll : null; //const defaultCallback = (typeof opts.defaultCallback === "function") ? opts.defaultCallback : null;
-
-    const afterAllFn = typeof opts.onAfterAll === "function" ? opts.onAfterAll : null;
-    const exprsMap = opts.expressionsMap || {};
-    const defaultExpr = opts.onDefault; //const inclSet = new Set(opts.includesList);
-
-    let exclList = ["constructor", "__prototype__", "_class", "_super"];
-    opts.excludesList && (exclList = exclList.concat(opts.excludesList));
-    const exclSet = new Set(exclList);
-    const targetObj = opts.target; //|| obj;
-    //const targetRefsMap = {};
-
-    function _walkObjectInternal(_obj, ctx) {
-      ctx = ctx || new ObjectIterationContext({
-        rootObject: _obj,
-        target: targetObj
-      });
-
-      try {
-        //const _target = ctx.target;
-        ctx.seenObjs.add(_obj);
-        ctx.currentObject = _obj; //ctx.target = _checkCreateTarget(_obj, ctx.target);
-
-        ctx.depth <= 0 && beforeAllFn && beforeAllFn.call(_obj, ctx);
-        const upperPathPrefix = ctx.path.length >= 1 ? `${ctx.path.join(".")}.` : null;
-        const subInclList = [];
-        opts.includesList && opts.includesList.forEach(inclPath => {
-          if (!upperPathPrefix) {
-            subInclList.push(inclPath);
-            return;
-          }
-
-          if (inclPath.startsWith(upperPathPrefix)) {
-            subInclList.push(inclPath.substring(upperPathPrefix.length));
-          }
-        });
-        forEachField(_obj, (k, v) => {
-          ctx.isCircularRef = false;
-
-          if (Array.isArray(_obj)) {
-            ctx.arrayIdx = k;
-          } else {
-            ctx.key = k;
-          } //ctx.target = (_target) ? _target[k] : null;
-
-
-          let fullPath = ctx.key || ctx.key === 0 ? ctx.path.concat([ctx.key]) : ctx.path;
-          let fullPathStr = fullPath.join(".") || "";
-          ctx.fullKey = fullPathStr;
-
-          if (exclSet.has(fullPathStr)) {
-            return true;
-          }
-
-          if (typeof v === "object" && v) {
-            ctx.isLeaf = false;
-
-            if (ctx.seenObjs.has(v)) {
-              ctx.isCircularRef = true;
-            } else if (typeof opts.maxDepth !== "number" || ctx.depth < opts.maxDepth) {
-              //Go deep down
-              ctx.seenObjs.add(v);
-              const subCtx = new ObjectIterationContext({
-                rootObject: ctx.rootObject,
-                path: fullPath,
-                key: Array.isArray(_obj) ? k : null,
-                depth: ctx.depth + 1,
-                seenObjs: ctx.seenObjs,
-                target: ctx.target && !Array.isArray(ctx.target) ? ctx.target[k] : null,
-                objectToTargetMappings: ctx.objectToTargetMappings,
-                includesList: subInclList
-              });
-              let proceed = opts.onBeforeWalkDown ? opts.onBeforeWalkDown.call(v, subCtx) : true;
-
-              if (typeof proceed === "undefined" || proceed) {
-                _walkObjectInternal(v, subCtx);
-
-                if (subCtx.stopped) {
-                  return false;
-                }
-
-                if (typeof subCtx.target !== "undefined") {
-                  ctx.checkCreateTarget();
-
-                  if (Array.isArray(ctx.target)) {
-                    ctx.target.push(subCtx.target);
-                  } else {
-                    ctx.target[k] = subCtx.target;
-                  }
-                }
-              }
-            }
-          } else {
-            ctx.isLeaf = true;
-          }
-
-          let expr = exprsMap[fullPathStr] || defaultExpr;
-          let result;
-
-          if (typeof expr === "function") {
-            result = expr.call(_obj, v, ctx);
-          } else {
-            result = expr;
-          } //ctx.target = _target;
-
-
-          if (ctx.stopped) {
-            return false;
-          } //TODO: Revise this
-
-
-          if (typeof result !== "undefined") {
-            ctx.checkCreateTarget();
-
-            if (Array.isArray(ctx.target)) {
-              ctx.target.push(result);
-            } else {
-              ctx.target[k] = result;
-            }
-          }
-
-          if (ctx.target) {
-            ctx.addTargetMapping(ctx.currentObject, ctx.target);
-          }
-
-          return true;
-        }, {
-          prototypeLimit: opts.prototypeLimit,
-          includesList: subInclList
-        });
-      } catch (err) {
-        typeof opts.onError === "function" && opts.onError(err);
-        ctx.lastError = err;
-      }
-
-      ctx.depth <= 0 && afterAllFn && afterAllFn.call(_obj, ctx);
-
-      if (ctx.lastError) {
-        throw ctx.lastError;
-      }
-
-      return ctx.target;
-    }
-
-    return _walkObjectInternal(obj);
-  } //TODO: Revise this later
-
-
-  walkObject.Context = ObjectIterationContext;
-  /**
-   * merge: merge src object into dest object
-   * @param {Object} dest 
-   * @param {Object} src 
-   * @param {Object} opts 
-   * @param {ObjectIterationContext} ctx 
-   */
-
-  function merge(dest, src, opts
-  /*, ctx*/
-  ) {
-    opts = opts || {};
-    const maxDepth = opts.deep ? opts.deep : 0;
-    walkObject(src, {
-      target: dest,
-      maxDepth: maxDepth,
-      includesList: opts.includesList,
-      excludesList: opts.excludesList,
-      prototypeLimit: opts.prototypeLimit,
-      onBeforeWalkDown: function (ctx) {
-        //Check src type
-        const val1 = this;
-
-        if (val1 instanceof Date || val1 instanceof global.Node || val1 instanceof global.Window) {
-          ctx.isLeaf = true;
-          return false;
-        }
-
-        return true;
-      },
-      onDefault: function (val1, ctx) {
-        //let obj1 = ctx.currentObject;
-        //ctx.checkCreateTarget();
-        let val2;
-
-        if (ctx.target) {
-          val2 = Array.isArray(ctx.target) ? null : ctx.key || ctx.key === 0 ? ctx.target[ctx.key] : null;
-        } //Check src and dest val
-
-
-        let isLeaf = ctx.isLeaf;
-
-        if (ctx.isCircularRef) {
-          isLeaf = true;
-          val2 = ctx.getMappedTarget(val1);
-          (0, _debug.default)(DEBUG_NS)(`Replacing Circular Ref: (${ctx.fullKey},`, val1, ") => ", val2);
-        } else if (typeof opts.deep === "number" && ctx.depth >= maxDepth || !opts.deep) {
-          isLeaf = true;
-          (0, _debug.default)(DEBUG_NS)(`Replacing Out-Of-Depth: (${ctx.fullKey},`, ctx.fullKey, ",", val1, ") => ", val2);
-          val2 = val1;
-        } else if (val1 instanceof Date && opts.deep) {
-          isLeaf = true;
-          val2 = new Date(val1.getTime());
-        } else if (isLeaf && Array.isArray(val1) && val1 && Array.isArray(val2) && val2) {
-          (0, _debug.default)(DEBUG_NS)(`Merging Array: (${ctx.fullKey},`, val1, " + ", val2, ") into => ", ctx.target);
-          val2 = val2.concat(val1);
-        } else {
-          val2 = val1;
-        }
-
-        if (!isLeaf) {
-          return;
-        } //Check target container
-
-
-        ctx.checkCreateTarget();
-        (0, _debug.default)(DEBUG_NS)(`Merging: (${ctx.fullKey},`, val2, ") into => ", ctx.target);
-        /*
-        if (Array.isArray(ctx.target)) {
-            console.log(`Merging: (${ctx.fullKey},`, val2, ") into array => ", ctx.target);
-            ctx.target.push(val2);
-            val2 = undefined;
-        } else {
-            console.log(`Merging: (${ctx.fullKey},`, val1, ") into => ", ctx.target);
-        }
-        */
-
-        return val2;
-      }
-    });
-    return this;
-  }
-  /**
-   * clone: Creates a clone of src object
-   * @param {Object} src 
-   */
-
-
-  function clone(src, opts) {
-    opts = opts || {};
-    let srcCls = src.constructor;
-    let dest = srcCls ? Object.create(srcCls) : {};
-    typeof opts === "undefined" && (opts.deep = true);
-    QUtils.merge(dest, src, opts);
-    return dest;
-  }
-
-  function extendClass(parent, childProto, childStatic) {
-    let childProto2 = Object.create(parent.prototype);
-
-    let childCls = (childProto ? childProto.constructor : null) || function QWiz_auto_constructor() {};
-
-    childCls.prototype && merge(childProto2, childCls.prototype, {
-      deep: true
-    });
-    childProto && merge(childProto2, childProto, {
-      deep: true
-    });
-    childStatic && merge(childCls, childStatic, {
-      deep: true
-    });
-    childProto2.constructor = childCls;
-    childCls.prototype = childProto2;
-    childProto2._super = parent;
-    childProto2.constructor._super = parent;
-    return childProto2;
-  }
-
-  function attachExtension(cls, extCls) {
-    cls.prototype = cls.prototype || {
-      constructor: cls
     };
-    merge(cls.prototype, extCls.prototype);
-    merge(cls, extCls, {
-      deep: true
-    });
-    return cls.prototype;
-  }
 
-  function makeFactory(cls, fac) {
-    if (!fac) {
-      fac = function QWiz_auto_factory() {
-        let instance = Object.create(cls.prototype);
-
-        let _constructor = cls.prototype.constructor || cls;
-
-        _constructor.apply(instance, arguments);
-
-        return instance;
-      };
-    }
-
-    merge(fac, cls);
-    fac.prototype = cls.prototype;
-    return fac;
-  }
-
-  merge(QUtils, {
-    forEachField: forEachField,
-    getPropByPath: getPropByPath,
-    setPropByPath: setPropByPath,
-    createEmptyCopy: createEmptyCopy,
-    walkObject: walkObject,
-    merge: merge,
-    clone: clone,
-    extendClass: extendClass,
-    attachExtension: attachExtension,
-    makeFactory: makeFactory
-  });
-  _namespace && merge(_namespace, QUtils);
-  return QUtils;
-}();
-
-exports.default = _default;
-
-},{"debug":3}],19:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-
-var _crossFetch = _interopRequireDefault(require("cross-fetch"));
-
-var _events = _interopRequireDefault(require("events"));
-
-var _util = _interopRequireDefault(require("util"));
-
-var _qwizUtils = _interopRequireDefault(require("./qwiz-utils"));
-
-var _qwizTextUtils = _interopRequireDefault(require("./qwiz-text-utils"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//DEPRECATED:
-
-/*
+    return {
+        Node: _DummyNode,
+        HTMLDocument: _DummyDocument,
+        Window: _DummyWindow
+    };
+})();
 var global = global || window;
-global.ChakritQ = global.ChakritQ || {};
-//const QUtils = global.ChakritQ.utils;
-*/
-var _default = function (_namespace) {
-  class WebApiClientImpl_Fetch {
-    constructor(props) {
-      const _static = WebApiClientImpl_Fetch;
-      const api = this;
-      this.baseURL = null;
-      this.loginPath = "login";
-      this.logoutPath = "logout";
-      props && _qwizUtils.default.merge(this, props, {
-        deep: true
-      });
 
-      _events.default.EventEmitter.call(this);
+module.exports = (function(_namespace) {
+    const QUtils = {};
+    const DEBUG_NS = "qwiz.utils";
 
-      const _private = {
-        userAuth: null,
-        userSession: null
-      };
-
-      this._loginInternal = function (method, reqData, opts) {
-        method = method || _static.POST;
+    //Base util functions
+    /**
+     * forEachField: Simple iteration over object fields
+     * @param {Object} obj
+     * @param {Function<String, *>} callback
+     * @param {Object} opts 
+     */
+    function forEachField (obj, callback, opts) {
         opts = opts || {};
+        const protoLimit = opts.prototypeLimit || Object.prototype;
+        const inclSet = new Set(opts.includesList);
+        let exclList = [ "constructor", "__prototype__", "_class", "_super" ];
+        (opts.excludesList) && (exclList = exclList.concat(opts.excludesList));
+        const exclSet = new Set(exclList);
 
-        if (method === _static.GET) {
-          return Promise.reject(new Error("GET Method Not Supported for login"));
+        function _next(k, v) {
+            return callback(k, v);
         }
-
-        if (_private.userSession) {
-          return Promise.reject(new Error("Already logged in"));
-        }
-
-        return this._callApiInternal(method, this.loginPath, reqData, opts).then(respData => {
-          console.log("Logged in with response: ", respData);
-          _private.userSession = respData;
-          typeof opts.loginCallback == "function" && opts.loginCallback.call(api, respData);
-          api.emit(_static.EVT_LOGGED_IN, _private.userSession);
-          return Promise.resolve(respData);
-        });
-      };
-
-      this._logoutInternal = function (method, opts) {
-        method = method || _static.POST;
-        opts = opts || {};
-
-        if (!_private.userSession) {
-          console.warn("Not Logged In");
-          return Promise.resolve(false);
-        }
-
-        return this._callApiInternal(method, this.logoutPath, null, opts).then(respData => {
-          console.log("Logged out with response: ", respData);
-          let lastSession = _private.userSession;
-          typeof opts.logoutCallback == "function" && opts.logoutCallback.call(api, respData, lastSession);
-          _private.userSession = null;
-          api.emit(_static.EVT_LOGGED_OUT, lastSession);
-          return Promise.resolve(respData);
-        });
-      }, this._callApiInternal = function (method, path, reqData, opts) {
-        method = method || _static.GET;
-        opts = opts || {};
-        const reqOpts = {
-          method: method,
-          headers: {},
-          query: null,
-          body: null,
-          credentials: _static.DEFAULT_CRED_MODE
-        };
-
-        if (method !== _static.GET) {
-          reqOpts.query = opts.query;
-
-          if (opts.useFormData) {
-            let formData = new FormData(opts.form);
-
-            this._checkUpdateFormData(formData, reqData);
-
-            reqOpts.body = formData;
-            reqOpts.headers[_static.HEADER_CONTENT_TYPE] = _static.CTYPE_MULTIPART_FORM_DATA;
-          } else {
-            reqOpts.body = _qwizTextUtils.default.safeSerializeJSON(reqData);
-            reqOpts.headers[_static.HEADER_CONTENT_TYPE] = _static.CTYPE_JSON;
-          }
-        } else {
-          reqOpts.query = reqData;
-        }
-
-        const url = _qwizTextUtils.default.getURL(this.baseURL, path, reqOpts.query);
-
-        opts.headers && _qwizUtils.default.merge(reqOpts.headers, opts.headers);
-
-        api._checkUpdateAuth(reqOpts.headers);
-
-        let resp = null;
-        return (0, _crossFetch.default)(url, reqOpts).then(_resp => {
-          resp = _resp;
-
-          try {
-            api._checkResponseStatus(resp, {
-              method: method,
-              noContentExpected: opts.noContentExpected
-            });
-          } catch (err) {
-            return Promise.reject(err);
-          }
-
-          const respCType = resp.headers.get(_static.HEADER_CONTENT_TYPE);
-          const cTypeParts = respCType || respCType === 0 ? respCType.split(";", 2) : [];
-          let data;
-
-          if (cTypeParts.length >= 1) {
-            if (cTypeParts[0] === _static.CTYPE_JSON) {
-              data = resp.json();
-            } else if (_static.CTYPE_REGEX_TEXTS.test(cTypeParts[0])) {
-              data = resp.text();
-            } else {
-              data = resp.blob();
+        if (Array.isArray(obj)) {
+            let n = obj.length;
+            for (let i = 0;i < n;i++) {
+                let proceed = _next(i, obj[i]);
+                if ((typeof proceed !== "undefined") && (!proceed)) {
+                    break;
+                }
             }
-          } else {
-            data = resp.blob();
-          }
+        } else {
+            for (let key in obj) {
+                if (exclSet.has(key)) {
+                    continue;
+                }
+                if ((!Object.prototype.hasOwnProperty.call(obj, key)) && (!inclSet.has(key))) {
+                    let foundInLimit = false;
+                    let objProto = obj.__prototype__ || obj.constructor.prototype;
+                    while ((objProto) && (typeof objProto === "object")) {
+                        if (objProto === protoLimit) {
+                            break;
+                        }
+                        if (Object.prototype.hasOwnProperty.call(objProto, key)) {
+                            foundInLimit = true;
+                            break;
+                        }
+                        objProto = objProto.__prototype__ || objProto.constructor.prototype;
+                    }
+                    if (!foundInLimit) {
+                        continue;
+                    }
+                }
+                let proceed = _next(key, obj[key]);
+                if ((typeof proceed !== "undefined") && (!proceed)) {
+                    break;
+                }
+            }
+        }
 
-          opts.onResponse && opts.onResponse(null, resp, data);
-          return data;
-        }).catch(err => {
-          opts.onResponse && opts.onResponse(err, resp);
-          api.emit(_static.EVT_ERROR, err);
-          return Promise.reject(err);
-        });
-      };
+        return this;
+    }
 
-      this._checkUpdateFormData = function (formData, src) {
-        _qwizUtils.default.forEachField(src, (k, v) => {
-          if (!k && k !== 0) {
-            return;
-          }
-
-          if (typeof k === "undefined" || k === null) {
-            return;
-          }
-
-          formData.append(k, v);
-        });
-
-        return formData;
-      };
-
-      this._checkUpdateAuth = function (headers, opts) {
+    /**
+     * Get object property by path
+     * @param {Object} obj
+     * @param {String|Array} path
+     */
+    function getPropByPath(obj, path, opts) {
         opts = opts || {};
-        const authOpts = opts.auth || _private.userAuth;
-
-        if (!authOpts) {
-          return headers;
+        const delim = opts.delimiter || getPropByPath.DEFAULT_DELIMITER;
+        if (!Array.isArray(path)) {
+            path = `${path}`.split(delim);
+        }
+        let prop = obj;
+        let n = path.length;
+        for (let i = 0;i < n;i++) {
+            let key = path[i];
+            let valid = (key) || (key === 0);
+            valid = valid && (typeof prop !== "undefined") && (prop !== null);
+            if (!valid) {
+                if (i + 1 < n) {
+                    prop = undefined;
+                }
+                break;
+            }
+            prop = prop[key];
         }
 
-        let authType = authOpts.type || _static.AUTH_BASIC;
-        let authParts = [authType];
-        let credStr;
+        return prop;
+    }
+    getPropByPath.DEFAULT_DELIMITER = ".";
 
-        switch (authType) {
-          case _static.AUTH_BASIC:
-            credStr = _private.userSession && _private.userSession.token ? btoa(`${authOpts.userName}:${_private.userSession.token}`) : btoa(`${authOpts.userName}:${authOpts.password}`);
-            authParts.push(credStr);
-            break;
-
-          case _static.AUTH_BEARER:
-            authParts.push(this.userSession.token);
-            break;
-
-          default:
-            break;
-        }
-
-        headers[_static.HEADER_AUTHORIZATION] = authParts.join(" ");
-        return headers;
-      };
-
-      this._checkResponseStatus = function (resp, opts) {
-        const _static = WebApiClientImpl_Fetch;
-        const api = this;
+    /**
+     * Set object property by path
+     * @param {Object} obj
+     * @param {String|Array} path
+     */
+    function setPropByPath(obj, path, val, opts) {
         opts = opts || {};
-
-        if (resp.status !== _static.HTTP_OK) {
-          if (resp.status === _static.HTTP_CREATED && opts.method === _static.POST) {//Ignore
-          } else if (resp.status === _static.HTTP_NO_CONTENT && opts.noContentExpected) {//Ignore
-          } else {
-            throw new Error(`Got response status: ${resp.status} ${resp.statusText}`);
-          }
+        const delim = opts.delimiter || setPropByPath.DEFAULT_DELIMITER;
+        if (!Array.isArray(path)) {
+            path = `${path}`.split(delim);
+        }
+        let prop = obj;
+        let n = path.length;
+        for (let i = 0;i < n;i++) {
+            let key = path[i];
+            let last = (i + 1 >= n);
+            let valid = (key) || (key === 0);
+            valid = valid && (typeof prop !== "undefined") && (prop !== null);
+            if (!valid) {
+                if (!last) {
+                    prop = undefined;
+                }
+                break;
+            }
+            if (last) {
+                if ((Array.isArray(prop)) && (!isNaN(key))) {
+                    while (prop.length <= key) {
+                        prop.push(null);
+                    }
+                    prop.push(val);
+                } else {
+                    prop[key] = val;
+                }
+            } else {
+                prop = prop[key];
+            }
         }
 
-        return true;
-      };
+        return prop;
+    }
+    setPropByPath.DEFAULT_DELIMITER = ".";
+
+    /**
+     * Creates object/array empty copy
+     * @param {Object} src 
+     */
+    function createEmptyCopy(src) {
+        if (!src) {
+            return {};
+        }
+        let target;
+        if (Array.isArray(src)) {
+            target = []; //new Array(src.length);
+        } else {
+            const srcProto = src.__prototype__ || src.constructor.prototype;
+            target = (srcProto) ? Object.create(srcProto) : {};
+        }
+
+        return target;
     }
 
-    login(method, reqData, opts) {
-      return this._loginInternal(method, reqData, opts);
+    class ObjectIterationContext {
+        /**
+         * @param {Object} props
+         */
+        constructor(props) {
+            const ctx = this;
+            (props) && forEachField(props, (k, v) => {
+                (typeof v !== "undefined") && (ctx[k] = v);
+            });
+            this.path = this.path || [];
+            this.depth = this.depth || 0;
+            this.isLeaf = this.isLeaf || false;
+            this.isCircularRef = this.isCircularRef || false;
+            this.stopped = this.stopped || false;
+            this.seenObjs = (this.seenObjs instanceof Set)
+                ? this.seenObjs
+                : new Set(this.seenObjs);
+            this.objectToTargetMappings = this.objectToTargetMappings || [];
+        }
+        
+        setTargetValue(key, val) {
+            if (Array.isArray(this.target)) {
+                if (Array.isArray(val)) {
+                    this.target = this.target.concat(val);
+                } else {
+                    //TODO: Revise this later
+                    for (let i = 0;i < key - this.target.length;i++) {
+                        this.target.push(null);
+                    }
+                    this.target.push(val);
+                }
+            } else {
+                this.target[key] = val;
+            }
+    
+            return this.target;
+        }
+        checkCreateTarget() {
+            if (!this.target) {
+                this.target = createEmptyCopy(this.currentObject);
+                this.addTargetMapping(this.currentObject, this.target);
+            }
+    
+            return this.target;
+        }
+        getMappedTarget(src) {
+            if ((!src) || (typeof src !== "object")) {
+                return null;
+            }
+            let target = null;
+            this.objectToTargetMappings.forEach((entry) => {
+                if (entry.src === src) {
+                    target = entry.target;
+                    //break
+                    return false;
+                }
+            });
+    
+            return target;
+        }
+        addTargetMapping(src, target) {
+            this.objectToTargetMappings.push({ src: src, target: target });
+        }
+    }
+    /*
+    function ObjectIterationContext(props) {
+        const ctx = this;
+        (props) && forEachField(props, (k, v) => {
+            (typeof v !== "undefined") && (ctx[k] = v);
+        });
+        this.depth = this.depth || 0;
+        this.stopped = this.stopped || false;
+        this.path = this.path || [];
+        this.seenObjs = (this.seenObjs instanceof Set)
+            ? new Set(this.seenObjs)
+            : this.seenObjs;
+        this.objectToTargetMappings = this.objectToTargetMappings || [];
+    }
+    ObjectIterationContext.prototype = {
+        constructor: ObjectIterationContext,
+        rootObject: null,
+        currentObject: null,
+        path: null,
+        key: null,
+        fullKey: null,
+        arrayIdx: null,
+        depth: 0,
+        stopped: false,
+        seenObjs: null,
+        target: null,
+        objectToTargetMappings: null,
+        isLeaf: false,
+        isCircularRef: false,
+        lastError: null,
+
+        setTargetValue: function (key, val) {
+            if (Array.isArray(this.target)) {
+                if (Array.isArray(val)) {
+                    this.target = this.target.concat(val);
+                } else {
+                    //TODO: Revise this later
+                    for (let i = 0;i < key - this.target.length;i++) {
+                        this.target.push(null);
+                    }
+                    this.target.push(val);
+                }
+            } else {
+                this.target[key] = val;
+            }
+    
+            return this.target;
+        },
+        checkCreateTarget: function() {
+            if (!this.target) {
+                this.target = createEmptyCopy(this.currentObject);
+                this.addTargetMapping(this.currentObject, this.target);
+            }
+    
+            return this.target;
+        },
+        getMappedTarget: function (src) {
+            if ((!src) || (typeof src !== "object")) {
+                return null;
+            }
+            let target = null;
+            this.objectToTargetMappings.forEach((entry) => {
+                if (entry.src === src) {
+                    target = entry.target;
+                    //break
+                    return false;
+                }
+            });
+    
+            return target;
+        },
+        addTargetMapping: function (src, target) {
+            this.objectToTargetMappings.push({ src: src, target: target });
+        }
+    };
+    */
+    
+    /**
+     * walkObject: Iteration through nested object tree to do expressions processing
+     * @param {Object} obj 
+     * @param {Object} opts 
+     */
+    function walkObject(obj, opts) {
+        opts = opts || {};
+        const beforeAllFn = (typeof opts.onBeforeAll === "function") ? opts.onBeforeAll : null;
+        //const defaultCallback = (typeof opts.defaultCallback === "function") ? opts.defaultCallback : null;
+        const afterAllFn = (typeof opts.onAfterAll === "function") ? opts.onAfterAll : null;
+        const exprsMap = opts.expressionsMap || {};
+        const defaultExpr = opts.onDefault;
+        //const inclSet = new Set(opts.includesList);
+        let exclList = [ "constructor", "__prototype__", "_class", "_super" ];
+        (opts.excludesList) && (exclList = exclList.concat(opts.excludesList));
+        const exclSet = new Set(exclList);
+        const targetObj = opts.target; //|| obj;
+        //const targetRefsMap = {};
+        
+        function _walkObjectInternal(_obj, ctx) {
+            ctx = ctx || new ObjectIterationContext({
+                rootObject: _obj,
+                target: targetObj
+            });
+            try {
+                //const _target = ctx.target;
+                ctx.seenObjs.add(_obj);
+                ctx.currentObject = _obj;
+                //ctx.target = _checkCreateTarget(_obj, ctx.target);
+                (ctx.depth <= 0) && (beforeAllFn) && beforeAllFn.call(_obj, ctx);
+
+                const upperPathPrefix = (ctx.path.length >= 1) ? `${ctx.path.join(".")}.` : null;
+                const subInclList = [];
+                (opts.includesList) && opts.includesList.forEach((inclPath) => {
+                    if (!upperPathPrefix) {
+                        subInclList.push(inclPath);
+                        return;
+                    }
+                    if (inclPath.startsWith(upperPathPrefix)) {
+                        subInclList.push(inclPath.substring(upperPathPrefix.length));
+                    }
+                });
+                forEachField(_obj,
+                    (k, v) => {
+                        ctx.isCircularRef = false;
+                        if (Array.isArray(_obj)) {
+                            ctx.arrayIdx = k;
+                        } else {
+                            ctx.key = k;
+                        }
+                        //ctx.target = (_target) ? _target[k] : null;
+                        let fullPath = ((ctx.key) || (ctx.key === 0))
+                            ? ctx.path.concat([ctx.key])
+                            : ctx.path;
+                        let fullPathStr = fullPath.join(".") || "";
+                        ctx.fullKey = fullPathStr;
+                        if (exclSet.has(fullPathStr)) {
+                            return true;
+                        }
+                        if ((typeof v === "object") && (v)) {
+                            ctx.isLeaf = false;
+                            if (ctx.seenObjs.has(v)) {
+                                ctx.isCircularRef = true;
+                            } else if ((typeof opts.maxDepth !== "number") || (ctx.depth < opts.maxDepth))
+                            {
+                                //Go deep down
+                                ctx.seenObjs.add(v);
+                                const subCtx = new ObjectIterationContext({
+                                    rootObject: ctx.rootObject,
+                                    path: fullPath,
+                                    key: (Array.isArray(_obj)) ? k : null,
+                                    depth: ctx.depth + 1,
+                                    seenObjs: ctx.seenObjs,
+                                    target: ((ctx.target) && (!Array.isArray(ctx.target)))
+                                        ? ctx.target[k]
+                                        : null,
+                                    objectToTargetMappings: ctx.objectToTargetMappings,
+                                    includesList: subInclList
+                                });
+                                let proceed = (opts.onBeforeWalkDown)
+                                    ? opts.onBeforeWalkDown.call(v, subCtx)
+                                    : true;
+                                if ((typeof proceed === "undefined") || (proceed)) {
+                                    _walkObjectInternal(v, subCtx);
+                                    if (subCtx.stopped) {
+                                        return false;
+                                    }
+                                    if (typeof subCtx.target !== "undefined") {
+                                        ctx.checkCreateTarget();
+                                        if (Array.isArray(ctx.target)) {
+                                            ctx.target.push(subCtx.target);
+                                        } else {
+                                            ctx.target[k] = subCtx.target;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            ctx.isLeaf = true;
+                        }
+
+                        let expr = exprsMap[fullPathStr] || defaultExpr;
+                        let result;
+                        if (typeof expr === "function") {
+                            result = expr.call(_obj, v, ctx);
+                        } else {
+                            result = expr;
+                        }
+                        //ctx.target = _target;
+                        if (ctx.stopped) {
+                            return false;
+                        }
+                        //TODO: Revise this
+                        if (typeof result !== "undefined") {
+                            ctx.checkCreateTarget();
+                            if (Array.isArray(ctx.target)) {
+                                ctx.target.push(result);
+                            } else {
+                                ctx.target[k] = result;
+                            }
+                        }
+                        if (ctx.target) {
+                            ctx.addTargetMapping(ctx.currentObject, ctx.target);
+                        }
+                        
+                        return true;
+                    },
+                    {
+                        prototypeLimit: opts.prototypeLimit,
+                        includesList: subInclList
+                    }
+                );
+            } catch (err) {
+                (typeof opts.onError === "function") && opts.onError(err);
+                ctx.lastError = err;
+            }
+            
+            (ctx.depth <= 0) && (afterAllFn) && afterAllFn.call(_obj, ctx);
+            if (ctx.lastError) {
+                throw ctx.lastError;
+            }
+
+            return ctx.target;
+        }
+        return _walkObjectInternal(obj);
+    }
+    //TODO: Revise this later
+    walkObject.Context = ObjectIterationContext;
+
+    /**
+     * merge: merge src object into dest object
+     * @param {Object} dest 
+     * @param {Object} src 
+     * @param {Object} opts 
+     * @param {ObjectIterationContext} ctx 
+     */
+    function merge (dest, src, opts /*, ctx*/) {
+        opts = opts || {};
+        const maxDepth = (opts.deep) ? opts.deep : 0;
+        
+        walkObject(src, {
+            target: dest,
+            maxDepth: maxDepth,
+            includesList: opts.includesList,
+            excludesList: opts.excludesList,
+            prototypeLimit: opts.prototypeLimit,
+            onBeforeWalkDown: function (ctx) {
+                //Check src type
+                const val1 = this;
+                if ((val1 instanceof Date)
+                    || (val1 instanceof global.Node)
+                    || (val1 instanceof global.Window))
+                {
+                    ctx.isLeaf = true;
+                    return false;
+                }
+                return true;
+            },
+            onDefault: function (val1, ctx) {
+                //let obj1 = ctx.currentObject;
+                //ctx.checkCreateTarget();
+                let val2;
+                if (ctx.target) {
+                    val2 = (Array.isArray(ctx.target))
+                        ? null
+                        : (((ctx.key) || (ctx.key === 0)) ? ctx.target[ctx.key] : null);
+                }
+
+                //Check src and dest val
+                let isLeaf = ctx.isLeaf;
+                if (ctx.isCircularRef) {
+                    isLeaf = true;
+                    val2 = ctx.getMappedTarget(val1);
+                    debug(DEBUG_NS)(`Replacing Circular Ref: (${ctx.fullKey},`, val1, ") => ", val2);
+                } else if (((typeof opts.deep === "number") && (ctx.depth >= maxDepth)) || (!opts.deep)) {
+                    isLeaf = true;
+                    debug(DEBUG_NS)(`Replacing Out-Of-Depth: (${ctx.fullKey},`, ctx.fullKey, ",", val1, ") => ", val2);
+                    val2 = val1;
+                } else if ((val1 instanceof Date) && (opts.deep)) {
+                    isLeaf = true;
+                    val2 = new Date(val1.getTime());
+                } else if ((isLeaf) && (Array.isArray(val1)) && (val1)
+                    && (Array.isArray(val2)) && (val2))
+                {
+                    debug(DEBUG_NS)(`Merging Array: (${ctx.fullKey},`, val1, " + ", val2 ,") into => ", ctx.target);
+                    val2 = val2.concat(val1);
+                } else {
+                    val2 = val1;
+                }
+                
+                if (!isLeaf) {
+                    return;
+                }
+
+                //Check target container
+                ctx.checkCreateTarget();
+                debug(DEBUG_NS)(`Merging: (${ctx.fullKey},`, val2, ") into => ", ctx.target);
+                /*
+                if (Array.isArray(ctx.target)) {
+                    console.log(`Merging: (${ctx.fullKey},`, val2, ") into array => ", ctx.target);
+                    ctx.target.push(val2);
+                    val2 = undefined;
+                } else {
+                    console.log(`Merging: (${ctx.fullKey},`, val1, ") into => ", ctx.target);
+                }
+                */
+
+                return val2;
+            }
+        });
+    
+        return this;
+    }
+    /**
+     * clone: Creates a clone of src object
+     * @param {Object} src 
+     */
+    function clone(src, opts) {
+        opts = opts || {};
+        let srcCls = src.constructor;
+        let dest =  (srcCls) ? Object.create(srcCls) : {};
+        (typeof opts === "undefined") && (opts.deep = true);
+        QUtils.merge(dest, src, opts);
+
+        return dest;
     }
 
-    logout(method, opts) {
-      return this._logoutInternal(method, opts);
+    function extendClass(parent, childProto, childStatic) {
+        let childProto2 = Object.create(parent.prototype);
+        let childCls = ((childProto) ? childProto.constructor : null) || function QWiz_auto_constructor () {
+        };
+        (childCls.prototype) && merge(childProto2, childCls.prototype, { deep: true });
+        (childProto) && merge(childProto2, childProto, { deep: true });
+        (childStatic) && merge(childCls, childStatic, { deep: true });
+        childProto2.constructor = childCls;
+        childCls.prototype = childProto2;
+        childProto2._super=parent;
+        childProto2.constructor._super = parent;
+
+        return childProto2;
+    }
+    function attachExtension(cls, extCls) {
+        if (!cls.prototype) {
+            cls.prototype = { constructor: cls };
+        }
+        merge(cls.prototype, extCls.prototype);
+        merge(cls, extCls, { deep: true });
+
+        return cls.prototype;
+    }
+        
+    function makeFactory(cls, fac) {
+        if (!fac) {
+            fac = function QWiz_auto_factory() {
+                let instance = Object.create(cls.prototype);
+                let _constructor = cls.prototype.constructor || cls;
+                _constructor.apply(instance, arguments);
+                return instance;
+            };
+        }
+        merge(fac, cls);
+        fac.prototype = cls.prototype;
+        
+        return fac;
     }
 
-    callAPI(method, path, reqData, opts) {
-      const _static = WebApiClientImpl_Fetch;
-      const api = this;
-      opts = opts || {};
-      opts.auth = undefined;
-      return this._callApiInternal(method, path, reqData, opts);
+    merge(QUtils, {
+        forEachField: forEachField,
+        getPropByPath: getPropByPath,
+        setPropByPath: setPropByPath,
+        createEmptyCopy: createEmptyCopy,
+        walkObject: walkObject,
+        merge: merge,
+        clone: clone,
+        extendClass: extendClass,
+        attachExtension: attachExtension,
+        makeFactory: makeFactory
+    });
+    (_namespace) && merge(_namespace, QUtils);
+
+    return QUtils;
+})( /*global.chakritw.qwiz.utils*/ );
+
+},{"debug":3}],18:[function(require,module,exports){
+"use strict";
+
+const events = require("events");
+const fetch = require("cross-fetch");
+const util = require("util");
+const QUtils = require("./qwiz-utils");
+const QTextUtils  = require("./qwiz-text-utils");
+
+module.exports = (function(_namespace) {
+    class WebApiClientImpl_Fetch {
+        constructor(props) {
+            const _static = WebApiClientImpl_Fetch;
+            const api = this;
+            this.baseURL = null;
+            this.loginPath = "login";
+            this.logoutPath = "logout";
+            (props) && QUtils.merge(this, props, { deep: true });
+            events.EventEmitter.call(this);
+
+            const _private = {
+                userAuth: null,
+                userSession: null
+            };
+            this._loginInternal = function (method, reqData, opts) {
+                method = method || _static.POST;
+                opts = opts || {};
+                if (method === _static.GET) {
+                    return Promise.reject(new Error("GET Method Not Supported for login"));
+                }
+                if (_private.userSession) {
+                    return Promise.reject(new Error("Already logged in"));
+                }
+
+                return this._callApiInternal(method, this.loginPath, reqData, opts)
+                    .then((respData) => {
+                        console.log("Logged in with response: ", respData);
+                        _private.userSession = respData;
+                        (typeof opts.loginCallback == "function")
+                            && opts.loginCallback.call(api, respData);
+                        api.emit(_static.EVT_LOGGED_IN, _private.userSession);
+                        
+                        return Promise.resolve(respData);
+                    });
+            };
+            this._logoutInternal = function (method, opts) {
+                method = method || _static.POST;
+                opts = opts || {};
+                if (!_private.userSession) {
+                    console.warn("Not Logged In");
+                    return Promise.resolve(false);
+                }
+
+                return this._callApiInternal(method, this.logoutPath, null, opts)
+                    .then((respData) => {
+                        console.log("Logged out with response: ", respData);
+                        let lastSession = _private.userSession;
+                        (typeof opts.logoutCallback == "function")
+                            && opts.logoutCallback.call(api, respData, lastSession);
+                        _private.userSession = null;
+                        api.emit(_static.EVT_LOGGED_OUT, lastSession);
+
+                        return Promise.resolve(respData);
+                    });
+            },
+            this._callApiInternal = function (method, path, reqData, opts) {
+                method = method || _static.GET;
+                opts = opts || {};
+                const reqOpts = {
+                    method: method,
+                    headers: {},
+                    query: null,
+                    body: null,
+                    credentials: _static.DEFAULT_CRED_MODE
+                };
+                if (method !== _static.GET) {
+                    reqOpts.query = opts.query;
+                    if (opts.useFormData) {
+                        let formData = new FormData(opts.form);
+                        this._checkUpdateFormData(formData, reqData);
+                        reqOpts.body = formData;
+                        reqOpts.headers[_static.HEADER_CONTENT_TYPE] = _static.CTYPE_MULTIPART_FORM_DATA;
+                    } else {
+                        reqOpts.body = QTextUtils.safeSerializeJSON(reqData);
+                        reqOpts.headers[_static.HEADER_CONTENT_TYPE] = _static.CTYPE_JSON;
+                    }
+                } else {
+                    reqOpts.query = reqData;
+                }
+                const url = QTextUtils.getURL(this.baseURL, path, reqOpts.query);
+                (opts.headers) && QUtils.merge(reqOpts.headers, opts.headers);
+                api._checkUpdateAuth(reqOpts.headers);
+                let resp = null;
+
+                return fetch(url, reqOpts)
+                    .then((_resp) => {
+                        resp = _resp;
+                        try {
+                            api._checkResponseStatus(resp, {
+                                method: method,
+                                noContentExpected: opts.noContentExpected
+                            });
+                        } catch (err) {
+                            return Promise.reject(err);
+                        }
+                        const respCType = resp.headers.get(_static.HEADER_CONTENT_TYPE);
+                        const cTypeParts = ((respCType) || (respCType === 0))
+                            ? respCType.split(";", 2)
+                            : [];
+                        let data;
+                        if (cTypeParts.length >= 1) {
+                            if (cTypeParts[0] === _static.CTYPE_JSON) {
+                                data = resp.json();
+                            } else if (_static.CTYPE_REGEX_TEXTS.test(cTypeParts[0])) {
+                                data = resp.text();
+                            } else {
+                                data = resp.blob();
+                            }
+                        } else {
+                            data = resp.blob();
+                        }
+                        (opts.onResponse) && opts.onResponse(null, resp, data);
+                        
+                        return data;
+                    })
+                    .catch((err) => {
+                        (opts.onResponse) && opts.onResponse(err, resp);
+                        api.emit(_static.EVT_ERROR, err);
+                        return Promise.reject(err);
+                    });
+            };
+
+            this._checkUpdateFormData = function (formData, src) {
+                QUtils.forEachField(src, (k, v) => {
+                    if ((!k) && (k !== 0)) {
+                        return;
+                    }
+                    if ((typeof k === "undefined") || (k === null)) {
+                        return;
+                    }
+                    formData.append(k, v);
+                });
+
+                return formData;
+            };
+            this._checkUpdateAuth = function (headers, opts) {
+                opts = opts || {};
+                const authOpts = opts.auth || _private.userAuth;
+                if (!authOpts) {
+                    return headers;
+                }
+                let authType = authOpts.type || _static.AUTH_BASIC;
+                let authParts = [ authType ];
+                let credStr;
+                switch (authType) {
+                    case _static.AUTH_BASIC:
+                        credStr = ((_private.userSession) && (_private.userSession.token))
+                            ? btoa(`${authOpts.userName}:${_private.userSession.token}`)
+                            : btoa(`${authOpts.userName}:${authOpts.password}`);
+                        authParts.push(credStr);
+                        break;
+                    case _static.AUTH_BEARER:
+                        authParts.push(this.userSession.token);
+                        break;
+                    default:
+                        break;
+                }
+                headers[_static.HEADER_AUTHORIZATION] = authParts.join(" ");
+
+                return headers;
+            };
+
+            this._checkResponseStatus = function (resp, opts) {
+                const _static = WebApiClientImpl_Fetch;
+                const api = this;
+                opts = opts || {};
+
+                if (resp.status !== _static.HTTP_OK) {
+                    if ((resp.status === _static.HTTP_CREATED) && (opts.method === _static.POST)) {
+                        //Ignore
+                    } else if ((resp.status === _static.HTTP_NO_CONTENT) && (opts.noContentExpected)) {
+                        //Ignore
+                    } else {
+                        let err = new Error(`Got response status: ${resp.status} ${resp.statusText}`);
+                        err.statusCode = resp.status;
+                        
+                        throw err;
+                    }
+                }
+
+                return true;
+            };
+        }
+        
+        login(method, reqData, opts) {
+            return this._loginInternal(method, reqData, opts);
+        }
+        logout(method, opts) {
+            return this._logoutInternal(method, opts);
+        }
+
+        callAPI(method, path, reqData, opts) {
+            const _static = WebApiClientImpl_Fetch;
+            const api = this;
+            opts = opts || {};
+
+            opts.auth = undefined;
+
+            return this._callApiInternal(method, path, reqData, opts);
+        }
     }
+    QUtils.attachExtension(WebApiClientImpl_Fetch, events.EventEmitter);
+    QUtils.merge(WebApiClientImpl_Fetch, {
+        //statics
+        GET: "GET",
+        POST: "POST",
+        PUT: "PUT",
+        PATCH: "PATCH",
+        DELETE: "DELETE",
 
-  }
+        HEADER_CONTENT_TYPE: "Content-Type",
+        HEADER_AUTHORIZATION: "Authorization",
+    
+        CTYPE_JSON: "application/json",
+        CTYPE_MULTIPART_FORM_DATA: "multipart/form-data",
+        CTYPE_FORM_URL: "application/x-www-form-urlencoded",
+        CTYPE_REGEX_TEXTS: /^(text\/(.+))/,
 
-  _qwizUtils.default.attachExtension(WebApiClientImpl_Fetch, _events.default.EventEmitter);
+        DEFAULT_CHARSET: "UTF-8",
+        DEFAULT_CRED_MODE: "include", //"same-origin"
 
-  _qwizUtils.default.merge(WebApiClientImpl_Fetch, {
-    //statics
-    GET: "GET",
-    POST: "POST",
-    PUT: "PUT",
-    PATCH: "PATCH",
-    DELETE: "DELETE",
-    HEADER_CONTENT_TYPE: "Content-Type",
-    HEADER_AUTHORIZATION: "Authorization",
-    CTYPE_JSON: "application/json",
-    CTYPE_MULTIPART_FORM_DATA: "multipart/form-data",
-    CTYPE_FORM_URL: "application/x-www-form-urlencoded",
-    CTYPE_REGEX_TEXTS: /^(text\/(.+))/,
-    DEFAULT_CHARSET: "UTF-8",
-    DEFAULT_CRED_MODE: "include",
-    //"same-origin"
-    AUTH_BASIC: "Basic",
-    AUTH_BEARER: "Bearer",
-    HTTP_OK: 200,
-    HTTP_CREATED: 201,
-    HTTP_NO_CONTENT: 204,
-    HTTP_UNAUTHORIZED: 401,
-    HTTP_FORBIDDEN: 403,
-    HTTP_NOT_FOUND: 404,
-    EVT_LOGGED_IN: "logged-in",
-    EVT_LOGGED_OUT: "logged-out",
-    EVT_ERROR: "error"
-  });
+        AUTH_BASIC: "Basic",
+        AUTH_BEARER: "Bearer",
 
-  _namespace && (_namespace.WebApiClientImpl_Fetch = WebApiClientImpl_Fetch);
-  return WebApiClientImpl_Fetch;
-}();
+        HTTP_OK: 200,
+        HTTP_CREATED: 201,
+        HTTP_NO_CONTENT: 204,
+        HTTP_UNAUTHORIZED: 401,
+        HTTP_FORBIDDEN: 403,
+        HTTP_NOT_FOUND: 404,
 
-exports.default = _default;
+        EVT_LOGGED_IN: "logged-in",
+        EVT_LOGGED_OUT: "logged-out",
+        EVT_ERROR: "error"
+    });
+    (_namespace) && (_namespace.WebApiClientImpl_Fetch = WebApiClientImpl_Fetch);
 
-},{"./qwiz-text-utils":17,"./qwiz-utils":18,"cross-fetch":2,"events":6,"util":13}],20:[function(require,module,exports){
+    return WebApiClientImpl_Fetch;
+})( /*global.chakritw*/ );
+
+},{"./qwiz-text-utils":16,"./qwiz-utils":17,"cross-fetch":2,"events":6,"util":13}],19:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -9983,25 +9670,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-var _events = _interopRequireDefault(require("events"));
+const events = require("events"); //const util = require("util");
 
-var _util = _interopRequireDefault(require("util"));
 
-var _qwizUtils = _interopRequireDefault(require("./qwiz-utils"));
+const QUtils = require("./qwiz-utils");
 
-var _qwizTextUtils = _interopRequireDefault(require("./qwiz-text-utils"));
+const QTextUtils = require("./qwiz-text-utils");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-//DEPRECATED:
-
-/*
-var global = global || window;
-global.ChakritQ = global.ChakritQ || {};
-//global.ChakritQ.utils = global.ChakritQ.utils || {};
-//global.ChakritQ.WebViewUtils = global.ChakritQ.WebViewUtils || {};
-//const QUtils = global.ChakritQ.utils;
-*/
 var _default = function (_namespace) {
   const WebViewLibs = {};
 
@@ -10019,8 +9694,9 @@ var _default = function (_namespace) {
         mainHeader: ".main-header,header",
         mainContent: ".main-content",
         mainFooter: ".main-footer,footer",
+        imports: 'link[rel="import"]',
         templates: "template",
-        imports: 'link[rel="import"]'
+        styles: 'link[rel="stylesheet"]'
       };
       this.comps = {
         head: null,
@@ -10029,26 +9705,58 @@ var _default = function (_namespace) {
         mainHeader: null,
         mainContent: null,
         mainFooter: null,
+        imports: null,
         templates: null,
-        imports: null
+        styles: null
       };
-      props && _qwizUtils.default.merge(this, props, {
+      this.importsMap = {};
+      this.templatesMap = {};
+      this.stylesMap = {};
+      this.templatesPrefixDataKey = "qwiz-tmpl-prefix";
+      this.stylesPrefixDataKey = "qwiz-css-prefix";
+      props && QUtils.merge(this, props, {
         deep: true
       });
-
-      _events.default.EventEmitter.call(this);
+      events.EventEmitter.call(this);
     }
 
     initOnReady() {
       this.document && this.document.addEventListener("DOMContentLoaded", this.init.bind(this));
+      return this;
     }
 
     init(domEvt) {
+      const _static = WebView;
       const view = this;
       const doc = this.document;
       console.log("Initializing WebView: ", domEvt);
+      const subResults = [];
+      return this.initComponents().then(result => {
+        subResults.push(result);
+        return view.initImports();
+      }).then(result => {
+        subResults.push(result);
+        return view.initTemplates();
+      }).then(result => {
+        subResults.push(result);
+        return view.initStyles();
+      }).then(result => {
+        subResults.push(result);
+        view.comps.loading && view.comps.loading.forEach(node => {
+          node.style.display = "none";
+        });
+        view.emit(_static.EVT_INIT_COMPLETE, subResults);
+        return Promise.resolve(true);
+      }).catch(err => {
+        view.onError(err);
+        return Promise.resolve(false);
+      });
+    }
 
-      _qwizUtils.default.forEachField(this.selectors, (k, v) => {
+    initComponents() {
+      const view = this;
+      const doc = this.document;
+      QUtils.forEachField(this.selectors, (k, v) => {
         view.comps[k] = doc.querySelectorAll(v);
       });
 
@@ -10057,19 +9765,92 @@ var _default = function (_namespace) {
       }
 
       console.log("Found page components: ", this.comps);
-      this.comps.loading && this.comps.loading.forEach(node => {
-        node.style.display = "none";
-      });
+      return Promise.resolve(true);
+    }
+
+    initImports() {
+      const _static = WebView;
+      const view = this;
+
+      if (!this.comps.imports || this.comps.imports.length < 1) {
+        return Promise.resolve(true);
+      } //TODO: Revise this later
+      //const proms = [];
+
+
+      for (let i = 0; i < this.comps.imports.length; i++) {
+        const impNode = this.comps.imports[i];
+
+        if (impNode.import) {
+          view.importsMap[impNode.href] = impNode.import;
+          const tmplPrefix = impNode.dataset[view.templatesPrefixDataKey];
+          const stylesPrefix = impNode.dataset[view.stylesPrefixDataKey];
+          const tmplNodes = impNode.import.querySelectorAll(this.selectors.template || "template");
+
+          if (tmplNodes) {
+            for (let j = 0; j < tmplNodes.length; j++) {
+              let key = tmplPrefix || tmplPrefix === 0 ? `${tmplPrefix}${tmplNodes[j].id}` : tmplNodes[j].id;
+              view.templatesMap[key] = tmplNodes[j].content;
+            }
+          }
+
+          const styleNodes = impNode.import.querySelectorAll(this.selectors.styles || 'link[rel="stylesheet"]');
+
+          if (styleNodes) {
+            for (let j = 0; j < styleNodes.length; j++) {
+              let key = stylesPrefix || stylesPrefix === 0 ? `${stylesPrefix}${styleNodes[j].id}` : styleNodes[j].id;
+              view.stylesMap[key] = styleNodes[j].content;
+            }
+          }
+
+          view.emit(_static.EVT_DOC_IMPORTED, impNode);
+        }
+      }
+
+      return Promise.resolve(true);
+    }
+
+    initTemplates() {
+      if (!this.comps.templates || this.comps.templates.length < 1) {
+        return Promise.resolve(true);
+      } //TODO: Revise this later
+      //const proms = [];
+
+
+      for (let i = 0; i < this.comps.templates.length; i++) {
+        const tmplNode = this.comps.templates[i];
+
+        if (tmplNode.content) {
+          this.templatesMap[tmplNode.id] = tmplNode.content;
+        }
+      }
+
+      return Promise.resolve(true);
+    }
+
+    initStyles() {
+      if (!this.comps.styles || this.comps.styles.length < 1) {
+        return Promise.resolve(true);
+      } //TODO: Revise this later
+      //const proms = [];
+
+
+      for (let i = 0; i < this.comps.styles.length; i++) {
+        const styleNode = this.comps.styles[i];
+        styleNode.href && (this.stylesMap[styleNode.href] = styleNode);
+      }
+
+      return Promise.resolve(true);
     }
 
     getURL(path, query) {
-      return _qwizTextUtils.default.getURL(this.baseURL, path, query);
+      return QTextUtils.getURL(this.baseURL, path, query);
     }
 
     getQuery() {
       const win = this.window;
       const queryString = win.location.search;
-      return _qwizTextUtils.default.getQuery(queryString);
+      return QTextUtils.getQuery(queryString);
     }
 
     getFormData(formNode, target) {
@@ -10103,13 +9884,13 @@ var _default = function (_namespace) {
               target[name] = val1 = [];
             }
 
-            if (optNode.hasAttribute("checked")) {
+            if (node.hasAttribute("checked")) {
               val1.push(val);
             }
           } else if (inputType === "radio") {
             let val1 = target[name];
 
-            if (typeof val1 === "undefined" && optNode.hasAttribute("checked")) {
+            if (node.hasAttribute("checked")) {
               target[name] = val1 = val;
             }
           } else {
@@ -10120,8 +9901,79 @@ var _default = function (_namespace) {
       return target;
     }
 
+    applyImport(src, destContainer, opts) {
+      const view = this;
+      const doc = this.document;
+      opts = opts || {};
+
+      if (typeof src === "string") {
+        src = this.importsMap[src];
+      }
+
+      if (!src) {
+        throw new Error("Source import not found");
+      }
+
+      let srcNode = opts.srcSelector ? src.querySelector(opts.srcSelector) : src.querySelector("body");
+
+      if (!srcNode) {
+        throw new Error("Source import selector/element not found");
+      }
+
+      destContainer.innerHTML = "";
+      let destNode = destContainer.document.importNode(srcNode, true);
+      opts.processor && (destNode = opts.processor(destNode));
+      destContainer.appendChild(destNode);
+    }
+
+    applyTemplate(src, destContainer, opts) {
+      const view = this;
+      const doc = this.document;
+      opts = opts || {};
+
+      if (typeof src === "string") {
+        src = this.templatesMap[src];
+      }
+
+      if (!src) {
+        throw new Error("Source template not found");
+      }
+
+      destContainer.innerHTML = "";
+
+      if (!src.content) {
+        //throw new Error
+        console.warn("Source template has no content");
+        return false;
+      }
+
+      let destNode = destContainer.document.importNode(src.content, true);
+      opts.processor && (destNode = opts.processor(destNode));
+      destContainer.appendChild(destNode);
+    }
+
+    onError(err) {
+      const _static = WebView;
+      const win = this.window;
+
+      if (!err.handled) {
+        err.handled = true;
+        console.error(err);
+        win.alert(`ERROR: ${err ? err.message : null}`);
+      }
+
+      this.emit(_static.EVT_ERROR, err);
+    }
+
   }
 
+  QUtils.attachExtension(WebView, events.EventEmitter);
+  QUtils.merge(WebView, {
+    //statics
+    EVT_INIT_COMPLETE: "init-complete",
+    EVT_ERROR: "error",
+    EVT_DOC_IMPORTED: "doc-imported"
+  });
   WebViewLibs.WebView = WebView;
 
   class IndexView extends WebView {
@@ -10137,23 +9989,23 @@ var _default = function (_namespace) {
     }
 
     init(domEvt) {
-      super.init(domEvt);
       const view = this;
       const doc = this.document;
+      return super.init(domEvt).then(() => {
+        for (let k of ["sidebar", "mainContentFrame"]) {
+          view.comps[k] = view.comps[k] && view.comps[k].length >= 1 ? view.comps[k][0] : null;
+        }
 
-      for (let k of ["sidebar", "mainContentFrame"]) {
-        this.comps[k] = this.comps[k] && this.comps[k].length >= 1 ? this.comps[k][0] : null;
-      }
+        if (view.useSidebar) {
+          view.initSidebar();
+        }
 
-      if (this.useSidebar) {
-        this.initSidebar();
-      }
+        if (view.useContentFrame) {
+          view.initContentFrame();
+        }
 
-      if (this.useContentFrame) {
-        this.initContentFrame();
-      }
-
-      return this;
+        return Promise.resolve(true);
+      });
     }
 
     initSidebar() {
@@ -10217,7 +10069,7 @@ var _default = function (_namespace) {
       }
 
       console.log("Loading subpage: ", name);
-      this.comps.mainContentFrame.src = _qwizTextUtils.default.getURL(this.subPageBaseURL, [`${name}.html`]);
+      this.comps.mainContentFrame.src = QTextUtils.getURL(this.subPageBaseURL, [`${name}.html`]);
       return true;
     }
 
@@ -10258,10 +10110,10 @@ var _default = function (_namespace) {
   }
 
   WebViewLibs.IndexView = IndexView;
-  _namespace && _qwizUtils.default.merge(_namespace, WebViewLibs);
+  _namespace && QUtils.merge(_namespace, WebViewLibs);
   return WebViewLibs;
 }();
 
 exports.default = _default;
 
-},{"./qwiz-text-utils":17,"./qwiz-utils":18,"events":6,"util":13}]},{},[15]);
+},{"./qwiz-text-utils":16,"./qwiz-utils":17,"events":6}]},{},[14]);

@@ -1,17 +1,11 @@
+"use strict";
 
-import QUtils from "./qwiz-utils";
-import { compileFunction } from "vm";
+const debug = require("debug");
+const util = require("util");
+const QUtils = require("./qwiz-utils");
 
-//DEPRECATED
-//Namespaces
-/*
-var global = global || window;
-global.chakritw = global.chakritw || {};
-global.chakritw.qwiz = global.chakritw.qwiz || {};
-global.chakritw.qwiz.utils = global.chakritw.qwiz.utils || {};
-*/
-
-export default (function(_namespace) {
+module.exports = (function(_namespace) {
+    const DEBUG_NS = "qwiz.utils";
     const QTextUtils = {};
 
     //Text util functions
@@ -98,6 +92,7 @@ export default (function(_namespace) {
                 QUtils.setPropByPath(flds, token.key, fldVal);
                 k1 = k2; //+ sufLen;
             }
+            debug(DEBUG_NS)(`Parsed fields from text: ${text} : ${this.pattern} => ${util.inspect(flds)}`);
 
             return flds;
         }

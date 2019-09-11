@@ -1,17 +1,9 @@
+"use strict";
 
-import events from "events";
-import util from "util";
-import QUtils from "./qwiz-utils";
-import QTextUtils from "./qwiz-text-utils";
-
-//DEPRECATED:
-/*
-var global = global || window;
-global.ChakritQ = global.ChakritQ || {};
-//global.ChakritQ.utils = global.ChakritQ.utils || {};
-//global.ChakritQ.WebViewUtils = global.ChakritQ.WebViewUtils || {};
-//const QUtils = global.ChakritQ.utils;
-*/
+const events = require("events");
+//const util = require("util");
+const QUtils = require("./qwiz-utils");
+const QTextUtils  = require("./qwiz-text-utils");
 
 export default (function(_namespace) {
     const WebViewLibs = {};

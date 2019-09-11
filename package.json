@@ -1,8 +1,7 @@
 {
   "name": "qwiz",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Q'Wiz Utilities for JS",
-  "main": "src/index.js",
   "scripts": {
     "browserify": "node -r esm node_modules/browserify/bin/cmd.js -p esmify src/index.browser.js >dist/qwiz.bundle.js && node -r esm node_modules/browserify/bin/cmd.js -p esmify -g uglifyify src/index.browser.js >dist/qwiz.bundle.min.js",
     "lint": "node node_modules/eslint/bin/eslint.js ./src",
@@ -11,11 +10,14 @@
     "test": "node -r esm node_modules/mocha/bin/_mocha tests/**/*.js"
   },
   "author": "Chakrit W <quaos.qrz@gmail.com>",
-  "license": "SEE LICENSE IN LICENSE.TXT",
+  "license": "MIT",
   "repository": {
     "type": "github",
-    "url": ""
+    "url": "https://github.com/quaos/qwiz-js"
   },
+  "main": "src/index.node.js",
+  "node": "src/index.node.js",
+  "files": [ "src/lib/", "src/index.js", "src/index.node.js", "dist/" ],
   "devDependencies": {
     "browserify": "^16.5.0",
     "eslint": "^6.2.2",

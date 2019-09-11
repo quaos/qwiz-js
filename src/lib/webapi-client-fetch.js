@@ -1,18 +1,12 @@
+"use strict";
 
-import fetch from "cross-fetch";
-import events from "events";
-import util from "util";
-import QUtils from "./qwiz-utils";
-import QTextUtils from "./qwiz-text-utils";
+const events = require("events");
+const fetch = require("cross-fetch");
+const util = require("util");
+const QUtils = require("./qwiz-utils");
+const QTextUtils  = require("./qwiz-text-utils");
 
-//DEPRECATED:
-/*
-var global = global || window;
-global.ChakritQ = global.ChakritQ || {};
-//const QUtils = global.ChakritQ.utils;
-*/
-
-export default (function(_namespace) {
+module.exports = (function(_namespace) {
     class WebApiClientImpl_Fetch {
         constructor(props) {
             const _static = WebApiClientImpl_Fetch;
