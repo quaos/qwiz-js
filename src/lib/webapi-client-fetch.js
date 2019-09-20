@@ -5,10 +5,12 @@ const fetch = require("cross-fetch");
 const util = require("util");
 const QUtils = require("./qwiz-utils");
 const QTextUtils  = require("./qwiz-text-utils");
+const WebApiClient = require("./webapi-client");
 
 module.exports = (function(_namespace) {
-    class WebApiClientImpl_Fetch {
+    class WebApiClientImpl_Fetch extends WebApiClient {
         constructor(props) {
+            super();
             const _static = WebApiClientImpl_Fetch;
             const api = this;
             this.baseURL = null;
@@ -22,9 +24,9 @@ module.exports = (function(_namespace) {
                 userSession: null
             };
             this._loginInternal = function (method, reqData, opts) {
-                method = method || _static.POST;
+                method = method || WebApiClient.POST;
                 opts = opts || {};
-                if (method === _static.GET) {
+                if (method === WebApiClient.GET) {
                     return Promise.reject(new Error("GET Method Not Supported for login"));
                 }
                 if (_private.userSession) {
@@ -37,13 +39,13 @@ module.exports = (function(_namespace) {
                         _private.userSession = respData;
                         (typeof opts.loginCallback == "function")
                             && opts.loginCallback.call(api, respData);
-                        api.emit(_static.EVT_LOGGED_IN, _private.userSession);
+                        api.emit(WebApiClient.EVT_LOGGED_IN, _private.userSession);
                         
                         return Promise.resolve(respData);
                     });
             };
             this._logoutInternal = function (method, opts) {
-                method = method || _static.POST;
+                method = method || WebApiClient.POST;
                 opts = opts || {};
                 if (!_private.userSession) {
                     console.warn("Not Logged In");
@@ -57,13 +59,13 @@ module.exports = (function(_namespace) {
                         (typeof opts.logoutCallback == "function")
                             && opts.logoutCallback.call(api, respData, lastSession);
                         _private.userSession = null;
-                        api.emit(_static.EVT_LOGGED_OUT, lastSession);
+                        api.emit(WebApiClient.EVT_LOGGED_OUT, lastSession);
 
                         return Promise.resolve(respData);
                     });
             },
             this._callApiInternal = function (method, path, reqData, opts) {
-                method = method || _static.GET;
+                method = method || WebApiClient.GET;
                 opts = opts || {};
                 const reqOpts = {
                     method: method,
@@ -72,7 +74,7 @@ module.exports = (function(_namespace) {
                     body: null,
                     credentials: _static.DEFAULT_CRED_MODE
                 };
-                if (method !== _static.GET) {
+                if (method !== WebApiClient.GET) {
                     reqOpts.query = opts.query;
                     if (opts.useFormData) {
                         let formData = new FormData(opts.form);
@@ -124,7 +126,7 @@ module.exports = (function(_namespace) {
                     })
                     .catch((err) => {
                         (opts.onResponse) && opts.onResponse(err, resp);
-                        api.emit(_static.EVT_ERROR, err);
+                        api.emit(WebApiClient.EVT_ERROR, err);
                         return Promise.reject(err);
                     });
             };
@@ -189,6 +191,8 @@ module.exports = (function(_namespace) {
 
                 return true;
             };
+            
+            WebApiClient.register("fetch", this);
         }
         
         login(method, reqData, opts) {
@@ -211,11 +215,7 @@ module.exports = (function(_namespace) {
     QUtils.attachExtension(WebApiClientImpl_Fetch, events.EventEmitter);
     QUtils.merge(WebApiClientImpl_Fetch, {
         //statics
-        GET: "GET",
-        POST: "POST",
-        PUT: "PUT",
-        PATCH: "PATCH",
-        DELETE: "DELETE",
+        IMPL_NAME: "fetch",
 
         HEADER_CONTENT_TYPE: "Content-Type",
         HEADER_AUTHORIZATION: "Authorization",
@@ -237,12 +237,10 @@ module.exports = (function(_namespace) {
         HTTP_UNAUTHORIZED: 401,
         HTTP_FORBIDDEN: 403,
         HTTP_NOT_FOUND: 404,
-
-        EVT_LOGGED_IN: "logged-in",
-        EVT_LOGGED_OUT: "logged-out",
-        EVT_ERROR: "error"
     });
     (_namespace) && (_namespace.WebApiClientImpl_Fetch = WebApiClientImpl_Fetch);
+
+    WebApiClient.register(WebApiClientImpl_Fetch.IMPL_NAME, WebApiClientImpl_Fetch);
 
     return WebApiClientImpl_Fetch;
 })( /*global.chakritw*/ );

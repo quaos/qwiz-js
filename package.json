@@ -1,8 +1,9 @@
 {
   "name": "qwiz",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Q'Wiz Utilities for JS",
   "scripts": {
+    "build": "grunt",
     "browserify": "node -r esm node_modules/browserify/bin/cmd.js -p esmify src/index.browser.js >dist/qwiz.bundle.js && node -r esm node_modules/browserify/bin/cmd.js -p esmify -g uglifyify src/index.browser.js >dist/qwiz.bundle.min.js",
     "lint": "node node_modules/eslint/bin/eslint.js ./src",
     "lint-fix": "node node_modules/eslint/bin/eslint.js --fix ./src",
@@ -24,9 +25,19 @@
     "dist/"
   ],
   "devDependencies": {
+    "browser-sync": "^2.26.7",
     "browserify": "^16.5.0",
     "eslint": "^6.2.2",
     "esmify": "^2.1.1",
+    "grunt": "^1.0.4",
+    "grunt-browser-sync": "^2.2.0",
+    "grunt-contrib-concat": "^1.0.1",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-jshint": "^2.1.0",
+    "grunt-open": "^0.2.4",
+    "grunt-run": "^0.8.1",
+    "http-server": "^0.11.1",
+    "jsdom": "^15.1.1",
     "mocha": "^6.2.0",
     "nodemon": "^1.19.1",
     "uglifyify": "^5.0.2"
@@ -37,5 +48,9 @@
     "es6-promise": "^4.2.8",
     "esm": "^3.2.25",
     "intl": "^1.2.5"
+  },
+  "testWebServer": {
+    "address": "127.0.0.1",
+    "port": 8080
   }
 }

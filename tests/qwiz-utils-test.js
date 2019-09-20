@@ -41,6 +41,20 @@ describe("qwiz-utils", function () {
             done();
         }).timeout(TEST_TIMEOUT);
 
+        it("Can check object field writable flag: isFieldWritable()", (done) => {
+            assert.equal(typeof QUtils.isFieldWritable, "function");
+
+            const expected = [ false, true ];
+            const obj = new DummyObj("obj#1");
+            Object.defineProperty(obj, "x1", { writable: false, value: "XXX1" });
+            Object.defineProperty(obj, "x2", { writable: true, value: "XXX2" });
+            assert.ok(obj.x1);
+            assert.ok(obj.x2);
+            assert.equal(QUtils.isFieldWritable(obj, "x1"), expected[0]);
+            assert.equal(QUtils.isFieldWritable(obj, "x2"), expected[1]);
+            done();
+        }).timeout(TEST_TIMEOUT);
+
         it("Can get property by path: getPropByPath() (string path case)", (done) => {
             assert.equal(typeof QUtils.forEachField, "function");
 

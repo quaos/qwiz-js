@@ -64,6 +64,8 @@ _I try to make this depend on the least number of most lightweight tools & frame
  ***TODO:***
 
 
+### web.WebApiClient
+Web API client Interface & registry point for implementations
 
 ### web.WebApiClientImpl_Fetch
   (also aliased as web.WebApiClient)
@@ -71,8 +73,14 @@ _I try to make this depend on the least number of most lightweight tools & frame
 
 
 
+## Grunt Tasks
 
-## Scripts
+* ***build:*** Build library for Browser use (output to `dist/qwiz.bundle.js` and minified version `dist/qwiz.bundle.min.js`, and copy `dist/qwiz.bundle.js` to `web-demo/assets/js/`)
+
+* ***demo-web:*** Run demo web server on _localhost:3000_ to test web libs functionality
+
+
+## NPM Scripts
 
 * ***browserify:*** Build library for Browser use (output to `dist/qwiz.bundle.js` and minified version `dist/qwiz.bundle.min.js`)
 
@@ -98,7 +106,7 @@ _I try to make this depend on the least number of most lightweight tools & frame
 
 ```javascript
 //For ES6 Modules:
-//import qwiz from "qwiz/index";
+//import qwiz from "qwiz/src/index";
 
 //For pre-ES6-Modules Node.JS:
 const qwiz = require("qwiz");
@@ -143,17 +151,13 @@ view.on(qwiz.web.WebView.EVT_ERROR, (err) => {
 </script>
 ```
 
-## Main Dependencies
+## Runtime Dependencies
 
 * [esm][1]
 * [intl][2]
-* [browserify][3]
-* [esmify][4]
-* [uglifyify][5]
 * [cross-fetch][6]
 * [es6-promise][7]
-* [eslint][8]
-* [mocha][9]
+* [debug][10]
 
 [1]: https://www.npmjs.com/package/esm "esm"
 [2]: https://www.npmjs.com/package/intl "intl"
@@ -164,4 +168,5 @@ view.on(qwiz.web.WebView.EVT_ERROR, (err) => {
 [7]: https://www.npmjs.com/package/es6-promise "es6-promise"
 [8]: https://www.npmjs.com/package/eslint "eslint"
 [9]: https://www.npmjs.com/package/mocha "mocha"
+[10]: https://www.npmjs.com/package/debug "10"
 

@@ -1,0 +1,85 @@
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: scroll;
+}
+
+.sidebar-container {
+  display: flex;
+  position: absolute;
+  float: left;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 20%;
+  padding-right: 1em;
+}
+nav.sidebar {
+  display: flex;
+  width: 100%;
+}
+nav.sidebar.collapsed {
+  width: 0;
+}
+nav.sidebar ul {
+  width: 100%;
+}
+nav.sidebar ul li {
+  list-style-type: none;
+}
+.sidebar-link {
+  background-color: #808080;
+  border-width: 1px;
+  border-color: #c0c0c0;
+  border-radius: 1em;
+  height: 2em;
+  text-align: center;
+  margin-top: 2px;
+  margin-bottom: 2px; 
+}
+.sidebar-link.active {
+  background-color: #c0c0c0;
+  color: #000000;
+  border-color: #808080;
+}
+.sidebar-link a {
+  text-align: center;
+  color: #ffffff;
+}
+.sidebar-link.active a {
+  text-align: center;
+  color: #000000;
+}
+
+.main-container {
+  display: flex;
+  position: absolute;
+  float: left;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 80%;
+  margin-left: 1em;
+}
+
+.main-header {
+  display: flex;
+  position: absolute;
+  float: left;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.main-footer {
+  display: flex;
+  position: absolute;
+  float: left;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.error {
+  background-color: #ffc080;
+  color: #ff0000;
+}

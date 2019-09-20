@@ -154,14 +154,7 @@ module.exports = (function(_namespace) {
         });
 
         let parts3 = [ parts2.join("/") ];
-        let nQPairs = 0;
-        (query) && QUtils.forEachField(query, (k, v) => {
-            parts3.push((nQPairs <= 0) ? "?" : "&");
-            parts3.push(encodeURIComponent(k));
-            parts3.push("=");
-            parts3.push(encodeURIComponent(v));
-            nQPairs++;
-        });
+        parts3.push(this.getQueryString(query));
 
         return parts3.join("");
     }
@@ -175,7 +168,27 @@ module.exports = (function(_namespace) {
 
         return query;
     }
+    function getQueryString(query) {
+        const qParts = [];
+        let nQPairs = 0;
+        (query) && QUtils.forEachField(query, (k, v) => {
+            qParts.push((nQPairs <= 0) ? "?" : "&");
+            qParts.push(encodeURIComponent(k));
+            qParts.push("=");
+            qParts.push(encodeURIComponent(v));
+            nQPairs++;
+        });
+
+        return qParts.join("");
+    }
     
+    function getUrlDiff(fromURL, toURL) {
+        const fromParts = ((fromURL) || (fromURL === 0)) ? `${fromURL}`.split("/") : [];
+        const toParts = ((toURL) || (toURL === 0)) ? `${toURL}`.split("/") : [];
+        const minLen = (fromParts.length < toParts.length) ? fromParts.length : toParts.length;
+        //TODO:
+    }
+
     QUtils.merge(QTextUtils, {
         isNullOrEmpty: isNullOrEmpty,
         renderTemplate: renderTemplate,
@@ -183,7 +196,9 @@ module.exports = (function(_namespace) {
         parseTextFields: parseTextFields,
         safeSerializeJSON: safeSerializeJSON,
         getURL: getURL,
-        getQuery: getQuery
+        getQuery: getQuery,
+        getQueryString: getQueryString,
+        getUrlDiff: getUrlDiff
     });
 
     (_namespace) && QUtils.merge(_namespace, QTextUtils);

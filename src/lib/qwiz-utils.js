@@ -3,27 +3,37 @@
 const debug = require("debug");
 
 //Global namespaces
-var window = window || (function _DummyWindow() {
-    function _DummyNode(tagName) {
-        this.tagName = tagName;
+//DEPRECATED:
+//var window = window || null;
+//if (!window) {
+//TODO: Revise this later
+class _DummyNode{
+  constructor(tagName) {
+    this.tagName = tagName;
+  }
+}
+if (!global.Node) {
+    global.Node = _DummyNode;
+}
+class _DummyDocument {
+  constructor() {
+  }
+  createElement(tagName) {
+    return new _DummyNode(tagName);
+  }
+}
+if (!global.Document) {
+    global.Document = _DummyDocument;
+}
+class _DummyWindow {
+    constructor() {
     }
-    _DummyNode.prototype = { constructor: _DummyNode }
-    function _DummyDocument() {
-    }
-    _DummyDocument.prototype = {
-        constructor: _DummyDocument,
-        createElement: function (tagName) {
-            return new _DummyNode(tagName);
-        }
-    };
-
-    return {
-        Node: _DummyNode,
-        HTMLDocument: _DummyDocument,
-        Window: _DummyWindow
-    };
-})();
-var global = global || window;
+}
+if (!global.Window) {
+    global.Window = _DummyWindow;
+}
+//DEPRECATED:
+//var global = global || window;
 
 module.exports = (function(_namespace) {
     const QUtils = {};
@@ -62,7 +72,8 @@ module.exports = (function(_namespace) {
                 }
                 if ((!Object.prototype.hasOwnProperty.call(obj, key)) && (!inclSet.has(key))) {
                     let foundInLimit = false;
-                    let objProto = obj.__prototype__ || obj.constructor.prototype;
+                    let objProto = obj.__proto__
+                        || ((obj.constructor) ? obj.constructor.prototype : null);
                     while ((objProto) && (typeof objProto === "object")) {
                         if (objProto === protoLimit) {
                             break;
@@ -71,7 +82,12 @@ module.exports = (function(_namespace) {
                             foundInLimit = true;
                             break;
                         }
-                        objProto = objProto.__prototype__ || objProto.constructor.prototype;
+                        const nextProto = objProto.__proto__
+                            || ((objProto.constructor) ? objProto.constructor.prototype : null);
+                        if ((nextProto === objProto)) {
+                            break;
+                        }
+                        objProto = nextProto;
                     }
                     if (!foundInLimit) {
                         continue;
@@ -85,6 +101,26 @@ module.exports = (function(_namespace) {
         }
 
         return this;
+    }
+    function isFieldWritable(obj, key, opts) {
+        opts = opts || {};
+        const protoLimit = opts.prototypeLimit;
+        if ((typeof obj[key] === "undefined") || (obj[key] === null)) {
+            return true;
+        }
+
+        let propDesc;
+        while (obj) {
+          if (obj === protoLimit) {
+            break;
+          }
+          propDesc = Object.getOwnPropertyDescriptor(obj, key);
+          if (propDesc) {
+            break;
+          }
+          obj = obj.__prototype__ || obj.constructor.prototype;
+        }
+        return (!propDesc) || (propDesc.writable);
     }
 
     /**
@@ -191,6 +227,7 @@ module.exports = (function(_namespace) {
             this.depth = this.depth || 0;
             this.isLeaf = this.isLeaf || false;
             this.isCircularRef = this.isCircularRef || false;
+            this.isSpecialObject = this.isSpecialObject || false;
             this.stopped = this.stopped || false;
             this.seenObjs = (this.seenObjs instanceof Set)
                 ? this.seenObjs
@@ -210,7 +247,9 @@ module.exports = (function(_namespace) {
                     this.target.push(val);
                 }
             } else {
-                this.target[key] = val;
+                if (isFieldWritable(this.target, key, { })) {
+                    this.target[key] = val;
+                }
             }
     
             return this.target;
@@ -242,82 +281,6 @@ module.exports = (function(_namespace) {
             this.objectToTargetMappings.push({ src: src, target: target });
         }
     }
-    /*
-    function ObjectIterationContext(props) {
-        const ctx = this;
-        (props) && forEachField(props, (k, v) => {
-            (typeof v !== "undefined") && (ctx[k] = v);
-        });
-        this.depth = this.depth || 0;
-        this.stopped = this.stopped || false;
-        this.path = this.path || [];
-        this.seenObjs = (this.seenObjs instanceof Set)
-            ? new Set(this.seenObjs)
-            : this.seenObjs;
-        this.objectToTargetMappings = this.objectToTargetMappings || [];
-    }
-    ObjectIterationContext.prototype = {
-        constructor: ObjectIterationContext,
-        rootObject: null,
-        currentObject: null,
-        path: null,
-        key: null,
-        fullKey: null,
-        arrayIdx: null,
-        depth: 0,
-        stopped: false,
-        seenObjs: null,
-        target: null,
-        objectToTargetMappings: null,
-        isLeaf: false,
-        isCircularRef: false,
-        lastError: null,
-
-        setTargetValue: function (key, val) {
-            if (Array.isArray(this.target)) {
-                if (Array.isArray(val)) {
-                    this.target = this.target.concat(val);
-                } else {
-                    //TODO: Revise this later
-                    for (let i = 0;i < key - this.target.length;i++) {
-                        this.target.push(null);
-                    }
-                    this.target.push(val);
-                }
-            } else {
-                this.target[key] = val;
-            }
-    
-            return this.target;
-        },
-        checkCreateTarget: function() {
-            if (!this.target) {
-                this.target = createEmptyCopy(this.currentObject);
-                this.addTargetMapping(this.currentObject, this.target);
-            }
-    
-            return this.target;
-        },
-        getMappedTarget: function (src) {
-            if ((!src) || (typeof src !== "object")) {
-                return null;
-            }
-            let target = null;
-            this.objectToTargetMappings.forEach((entry) => {
-                if (entry.src === src) {
-                    target = entry.target;
-                    //break
-                    return false;
-                }
-            });
-    
-            return target;
-        },
-        addTargetMapping: function (src, target) {
-            this.objectToTargetMappings.push({ src: src, target: target });
-        }
-    };
-    */
     
     /**
      * walkObject: Iteration through nested object tree to do expressions processing
@@ -364,6 +327,7 @@ module.exports = (function(_namespace) {
                 forEachField(_obj,
                     (k, v) => {
                         ctx.isCircularRef = false;
+                        ctx.isSpecialObject = false;
                         if (Array.isArray(_obj)) {
                             ctx.arrayIdx = k;
                         } else {
@@ -382,12 +346,24 @@ module.exports = (function(_namespace) {
                             ctx.isLeaf = false;
                             if (ctx.seenObjs.has(v)) {
                                 ctx.isCircularRef = true;
-                            } else if ((typeof opts.maxDepth !== "number") || (ctx.depth < opts.maxDepth))
+                            }
+                            //Check for platform object & special objects to prevent Invocation Errors
+                            if (((global.Node) && (v instanceof global.Node))
+                                || ((global.NodeList) && (v instanceof global.NodeList))
+                                || ((global.HTMLCollection) && (v instanceof global.HTMLCollection))
+                                || ((global.Window) && (v instanceof global.Window))
+                                || ((global.process) && (v === global.process)))
+                            {
+                                ctx.isSpecialObject = true;
+                            }
+                            if ((!ctx.isCircularRef) && (!ctx.isSpecialObject)
+                                && ((typeof opts.maxDepth !== "number") || (ctx.depth < opts.maxDepth)))
                             {
                                 //Go deep down
                                 ctx.seenObjs.add(v);
                                 const subCtx = new ObjectIterationContext({
                                     rootObject: ctx.rootObject,
+                                    parent: ctx,
                                     path: fullPath,
                                     key: (Array.isArray(_obj)) ? k : null,
                                     depth: ctx.depth + 1,
@@ -399,7 +375,7 @@ module.exports = (function(_namespace) {
                                     includesList: subInclList
                                 });
                                 let proceed = (opts.onBeforeWalkDown)
-                                    ? opts.onBeforeWalkDown.call(v, subCtx)
+                                    ? opts.onBeforeWalkDown.call(v, ctx, subCtx)
                                     : true;
                                 if ((typeof proceed === "undefined") || (proceed)) {
                                     _walkObjectInternal(v, subCtx);
@@ -411,7 +387,9 @@ module.exports = (function(_namespace) {
                                         if (Array.isArray(ctx.target)) {
                                             ctx.target.push(subCtx.target);
                                         } else {
+                                          if (isFieldWritable(ctx.target, k)) {
                                             ctx.target[k] = subCtx.target;
+                                          }
                                         }
                                     }
                                 }
@@ -437,7 +415,9 @@ module.exports = (function(_namespace) {
                             if (Array.isArray(ctx.target)) {
                                 ctx.target.push(result);
                             } else {
-                                ctx.target[k] = result;
+                                if (isFieldWritable(ctx.target, k)) {
+                                  ctx.target[k] = result;
+                                }
                             }
                         }
                         if (ctx.target) {
@@ -485,12 +465,11 @@ module.exports = (function(_namespace) {
             includesList: opts.includesList,
             excludesList: opts.excludesList,
             prototypeLimit: opts.prototypeLimit,
-            onBeforeWalkDown: function (ctx) {
+            onBeforeWalkDown: function (ctx, subCtx) {
                 //Check src type
                 const val1 = this;
                 if ((val1 instanceof Date)
-                    || (val1 instanceof global.Node)
-                    || (val1 instanceof global.Window))
+                    || (ctx.isSpecialObject))
                 {
                     ctx.isLeaf = true;
                     return false;
@@ -517,18 +496,21 @@ module.exports = (function(_namespace) {
                     isLeaf = true;
                     debug(DEBUG_NS)(`Replacing Out-Of-Depth: (${ctx.fullKey},`, ctx.fullKey, ",", val1, ") => ", val2);
                     val2 = val1;
-                } else if ((val1 instanceof Date) && (opts.deep)) {
+                } else if (ctx.isSpecialObject) {
                     isLeaf = true;
-                    val2 = new Date(val1.getTime());
+                    val2 = val1;
+                    debug(DEBUG_NS)(`Assigning Special Object: ${val2} into target`);
+                } else if (val1 instanceof Date) {
+                    isLeaf = true;
+                    val2 = (opts.deep) ? new Date(val1.getTime()) : val1;
                 } else if ((isLeaf) && (Array.isArray(val1)) && (val1)
                     && (Array.isArray(val2)) && (val2))
                 {
-                    debug(DEBUG_NS)(`Merging Array: (${ctx.fullKey},`, val1, " + ", val2 ,") into => ", ctx.target);
+                    debug(DEBUG_NS)(`Merging Array: (${ctx.fullKey},`, val1, " + ", val2 ,") into target");
                     val2 = val2.concat(val1);
                 } else {
                     val2 = val1;
                 }
-                
                 if (!isLeaf) {
                     return;
                 }
@@ -607,9 +589,11 @@ module.exports = (function(_namespace) {
 
     merge(QUtils, {
         forEachField: forEachField,
+        isFieldWritable: isFieldWritable,
         getPropByPath: getPropByPath,
         setPropByPath: setPropByPath,
         createEmptyCopy: createEmptyCopy,
+        ObjectIterationContext: ObjectIterationContext,
         walkObject: walkObject,
         merge: merge,
         clone: clone,

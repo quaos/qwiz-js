@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Welcome to Q'Wiz WebView library demo</title>
+<link rel="stylesheet" id="mainCss" href="assets/css/main.css"/>
+<link rel="import" id="sidebarImport" data-tmpl-prefix="" href="views/_sidebar.html"/>
+<link rel="import" id="headerImport" data-tmpl-prefix="" href="views/_header.html"/>
+<link rel="import" id="footerImport" data-tmpl-prefix="" href="views/_footer.html"/>
+</head>
+<body>
+<section id="sidebarContainer" class="sidebar-container"></section>
+<section id="mainContainer" class="main-container">
+    <header id="mainHeader" class="main-header"></header>
+    <div id="resultMessages" class="error-messages"></div>
+    <!-- Contents from Subpage: -->
+    <div id="subPageWrapper" class="main-content-wrapper">
+    </div>
+    <footer id="mainFooter" class="main-footer"></footer>
+</section>
+<script src="assets/js/qwiz.bundle.js"></script>
+<script>
+(function(doc, win, qwiz) {
+    class DemoIndexView extends qwiz.web.IndexView {
+        constructor(props) {
+            super(props);
+        }
+        init() {
+            const view = this;
+
+            return super.init()
+                .then(() => {
+                    /*
+                    const sidebarTmpl = view.templatesMap["sidebarTmpl"];
+                    const sidebarLinkTmpl = view.templatesMap["sidebarLinkTmpl"];
+                    */
+                    
+                    return Promise.resolve(true);
+                });
+        }
+    }
+
+    const view = new DemoIndexView({
+        document: doc,
+        window: win,
+        model: {
+            header: {},
+            sidebar: [
+                { title: "Home", url: "?p=home" },
+                { title: "About", url: "?p=about" } //,
+                //{ title: "Contact", url: "?p=contact" }
+            ],
+            footer: {}
+        },
+        //defaultLanguage: "en",
+        defaultSubPage: "home",
+        queryKeys: {
+            subPage: "p"
+        }
+    });
+    view.initOnReady();
+})(document, window, window.chakritw.qwiz);
+</script>
+</body>
+</html>
