@@ -77,7 +77,7 @@ Web API client Interface & registry point for implementations
 
 * ***build:*** Build library for Browser use (output to `dist/qwiz.bundle.js` and minified version `dist/qwiz.bundle.min.js`, and copy `dist/qwiz.bundle.js` to `web-demo/assets/js/`)
 
-* ***demo-web:*** Run demo web server on _localhost:3000_ to test web libs functionality
+* ***web-demo:*** Run demo web server on _localhost:3000_ to test web libs functionality
 
 
 ## NPM Scripts
@@ -137,13 +137,14 @@ const view = new qwiz.web.WebView({
     window: window,
     document: document,
     /* ... */
-}).initOnReady();
+});
 view.on(qwiz.web.WebView.EVT_INIT_COMPLETE, (stepResults) => {
     /* ... */
 });
 view.on(qwiz.web.WebView.EVT_ERROR, (err) => {
     /* ... */
 });
+view.initOnReady();
 
 /* .... */
 
