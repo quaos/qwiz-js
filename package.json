@@ -1,6 +1,6 @@
 {
   "name": "qwiz",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Q'Wiz Utilities for JS",
   "scripts": {
     "build": "grunt",

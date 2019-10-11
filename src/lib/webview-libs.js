@@ -349,7 +349,7 @@ module.exports = (function(_namespace) {
                 throw new Error(`Source Import [${src}] not found`);
             }
             let srcNode = ((opts.selector)
-                ? src.querySelector(opts.srcSelector)
+                ? src.querySelector(opts.selector)
                 : src.querySelector("body"))
                 || src;
             if (!srcNode) {
@@ -513,6 +513,7 @@ module.exports = (function(_namespace) {
             QUtils.walkObject(this.model, {
                 target: model,
                 onDefault: (val1, ctx) => {
+                    const fullPath = ctx.path.concat([ ctx.key ]).join(".");
                     if (typeof ctx.target[ctx.key] === undefined) {
                         modelDiff.deleted[fullPath] = val1;
                         ctx.currentObject[ctx.key] = undefined;
@@ -650,6 +651,19 @@ module.exports = (function(_namespace) {
             
         init(domEvt) {
             const view = this;
+
+            return this.initAllStages(domEvt)
+                .then((subResults) => {
+                    view.onInitCompleted(subResults);
+                    return Promise.resolve(true);
+                })
+                .catch((err) => {
+                    view.onError(err);
+                    return Promise.resolve(false);
+                });
+        }
+        initAllStages(domEvt) {
+            const view = this;
             const doc = this.document;
             let subResults;
 
@@ -684,16 +698,6 @@ module.exports = (function(_namespace) {
                     return (subPage)
                         ? view.loadSubPage(subPage)
                         : Promise.resolve(false);
-                })
-                .then((result) => {
-                    subResults.push(result);
-                    super.onInitCompleted(subResults);
-
-                    return Promise.resolve(true);
-                })
-                .catch((err) => {
-                    view.onError(err);
-                    return Promise.resolve(false);
                 });
         }
         initSidebar() {
@@ -731,7 +735,7 @@ module.exports = (function(_namespace) {
             const view = this;
             const footerTmpl = this.templatesMap.footer;
             (footerTmpl) && this.applyTemplate(footerTmpl, this.comps.mainFooter, {
-                render: (node) => view.renderTemplateNode(node, view.model.header)
+                render: (node) => view.renderTemplateNode(node, view.model.footer)
             });
         }
         initContentFrame() {
@@ -831,6 +835,10 @@ module.exports = (function(_namespace) {
                 
                 const frame = this.comps.mainContentFrame;
                 const frameWin = frame.contentWindow;
+                frameWin.chakritw = frameWin.chakritw || {};
+                frameWin.chakritw.qwiz = frameWin.chakritw.qwiz || {};
+                frameWin.chakritw.qwiz.web = frameWin.chakritw.qwiz.web || {};
+                frameWin.chakritw.qwiz.web.indexView = view;
                 console.log(`Loading subpage [${name}] from: ${subPageURL} into content frame: `, frame);
 
                 return new Promise((resolve, reject) => {
@@ -838,11 +846,11 @@ module.exports = (function(_namespace) {
                         console.log(evt);
                         clearEvents();
                         resolve(true);
-                    };
+                    }
                     function onError(err) {
                         clearEvents();
                         reject(err);
-                    };
+                    }
                     function clearEvents() {
                         frameWin.events.removeEventListener("load", onLoad);
                         frameWin.events.removeEventListener("error", onError);
@@ -865,7 +873,10 @@ module.exports = (function(_namespace) {
                         ? impDoc.querySelector(view.selectors.subPageContent)
                         : null)
                         || impDoc.body;
-                    view.applyImport(subPageNode, this.comps.mainContentWrapper, { });
+                    view.applyImport(subPageNode, this.comps.mainContentWrapper, {
+                        selector: view.selectors.subPageContent,
+                        render: (node) => view.renderTemplateNode(node, view.model.subPage, { })
+                    });
 
                     return Promise.resolve(true);
                 });

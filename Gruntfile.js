@@ -20,7 +20,8 @@ module.exports = function(grunt) {
             'esmify',
             'src/index.browser.js',
             '-o',
-            'dist/<%= pkg.name %>.bundle.js'
+            'dist/<%= pkg.name %>.bundle.js',
+            '--debug'
           ]
         },
         "build-min": {
@@ -53,7 +54,7 @@ module.exports = function(grunt) {
             expand: true,            
             flatten: false,
             cwd: 'dist',
-            src: '<%= pkg.name %>.bundle.js',
+            src: ['<%= pkg.name %>.bundle.js', '<%= pkg.name %>.bundle.js.map'],
             dest: 'web-demo/assets/js/',
             filter: 'isFile'
         }

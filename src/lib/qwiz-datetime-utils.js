@@ -456,7 +456,7 @@ module.exports = (function(_namespace) {
             //TODO: Revise this later
             timeZoneOffset: ((opts.timeZoneOffset) || (opts.timeZoneOffset === 0))
                 ? opts.timeZoneOffset
-                : -dt.getTimezoneOffset()
+                : -t.getTimezoneOffset()
         });
     }
     formatDateTime.DEFAULT_PATTERN = "yyyy-mm-dd HH:MM:SS.sss";

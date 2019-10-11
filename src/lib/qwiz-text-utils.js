@@ -1,8 +1,27 @@
 "use strict";
 
 const debug = require("debug");
+const IntlPolyfill = global.IntlPolyfill = require("intl");
 const util = require("util");
 const QUtils = require("./qwiz-utils");
+
+/**
+ * WORKAROUND FOR Intl BUGS
+ * Ref: https://stackoverflow.com/questions/30385277/node-cannot-replace-intl-to-use-intlpolyfill
+ * https://github.com/andyearnshaw/Intl.js/issues/256
+ */
+global.Intl = global.Intl || IntlPolyfill;
+global.Intl.NumberFormat = IntlPolyfill.NumberFormat;
+global.Intl.DateTimeFormat = IntlPolyfill.DateTimeFormat;
+IntlPolyfill.__disableRegExpRestore();
+
+/**
+ * Intl locale supports
+ */
+require("intl/locale-data/jsonp/en-US");
+require("intl/locale-data/jsonp/en-GB");
+require("intl/locale-data/jsonp/th-TH");
+require("intl/locale-data/jsonp/ja-JP");
 
 module.exports = (function(_namespace) {
     const DEBUG_NS = "qwiz.utils";
@@ -12,6 +31,38 @@ module.exports = (function(_namespace) {
     function isNullOrEmpty(s) {
         return (typeof s === "undefined") || (s === null) || (s === "");
     }
+
+    function padLeft(s, ch, len) {
+        if (ch.length < 1) {
+            return s;
+        }
+        const buf = [];
+        let k = s.length;
+        while (k < len) {
+            buf.push(ch);
+            k += ch.length;
+        }
+        buf.push(s);
+
+        return buf.join("");
+    }
+    function padRight(s, ch, len) {
+        if (ch.length < 1) {
+            return s;
+        }
+        const buf = [ s ];
+        let k = s.length;
+        while (k < len) {
+            buf.push(ch);
+            k += ch.length;
+        }
+
+        return buf.join("");
+    }
+    function addCommas(x) {
+        return addCommas.NUM_FORMAT.format(x*1);
+    }
+    addCommas.NUM_FORMAT = new global.Intl.NumberFormat("en-US", {style:"decimal"});
 
     function renderTemplate(tmpl, vars, opts) {
         opts = opts || {};
@@ -191,6 +242,9 @@ module.exports = (function(_namespace) {
 
     QUtils.merge(QTextUtils, {
         isNullOrEmpty: isNullOrEmpty,
+        padLeft: padLeft,
+        padRight: padRight,
+        addCommas: addCommas,
         renderTemplate: renderTemplate,
         TextFieldsParser: TextFieldsParser,
         parseTextFields: parseTextFields,

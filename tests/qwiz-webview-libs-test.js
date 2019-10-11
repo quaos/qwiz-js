@@ -29,7 +29,7 @@ describe("qwiz-webview-libs", function () {
         global.DocumentFragment = doc.createDocumentFragment().constructor;
         global.Element = doc.createElement("div").constructor;
         global.TextNode = doc.createTextNode("&nbsp;").constructor;
-        global.CDATASection = doc.createCDATASection("&nbsp;").constructor;
+        //global.CDATASection = doc.createCDATASection("&nbsp;").constructor;
         global.NodeList = doc.querySelectorAll("section").constructor;
         global.HTMLCollection = doc.children.constructor;
 
