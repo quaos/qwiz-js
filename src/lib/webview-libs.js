@@ -104,31 +104,16 @@ module.exports = (function(_namespace) {
             const view = this;
             console.log("Initializing WebView: ", domEvt);
             this.query = this.getQuery();
-            const subResults = [];
+            //const subResults = [];
+            this.flags.canImport = this.isHtmlImportSupported();
+            this.flags.canUseTemplate = this.isHtmlTemplateSupported();
 
-            return this.initComponents()
-                .then((result) => {
-                    subResults.push(result);
-                    view.flags.canImport = view.isHtmlImportSupported();
-
-                    return (view.flags.canImport) ? view.initImports() : Promise.resolve(false);
-                })
-                .then((result) => {
-                    subResults.push(result);
-                    view.flags.canUseTemplate = view.isHtmlTemplateSupported();
-
-                    return (view.flags.canUseTemplate) ? view.initTemplates() : Promise.resolve(false);
-                })
-                .then((result) => {
-                    subResults.push(result);
-
-                    return view.initStyles();
-                })
-                .then((result) => {
-                    subResults.push(result);
-
-                    return Promise.resolve(subResults);
-                });
+            return QUtils.chainPromises([
+                this.initComponents.bind(this),
+                (this.flags.canImport) ? this.initImports.bind(this) : false,
+                (this.flags.canUseTemplate) ? this.initTemplates.bind(this) : false,
+                this.initStyles.bind(this)
+            ], domEvt);
         }
         initComponents() {
             const view = this;
@@ -670,34 +655,24 @@ module.exports = (function(_namespace) {
             return super.initAllStages(domEvt)
                 .then((subResults1) => {
                     subResults = subResults1 || [];
-
                     view.initSingularComponents(["sidebar", "mainContentFrame", "mainContentWrapper" ]);
-                    if (view.useSidebar) {
-                        view.initSidebar();
-                    }
-                    if (view.comps.mainHeader) {
-                        view.initHeader();
-                    }
-                    if (view.useContentFrame) {
-                        view.initContentFrame();
-                    }
-                    if (view.comps.mainFooter) {
-                        view.initFooter();
-                    }
 
-                    return Promise.resolve(true);
-                })
-                .then((result) => {
-                    subResults.push(result);
-
-                    const subPage = ((this.queryKeys.subPage)
-                        ? this.query[this.queryKeys.subPage]
-                        : null)
-                        || this.defaultSubPage;
-
-                    return (subPage)
-                        ? view.loadSubPage(subPage)
-                        : Promise.resolve(false);
+                    return QUtils.chainPromises([
+                        (view.useSidebar) ? view.initSidebar.bind(view) : true,
+                        (view.comps.mainHeader) ? view.initHeader.bind(view) : true,
+                        (view.useContentFrame) ? view.initContentFrame.bind(view) : true,
+                        (view.comps.mainFooter) ? view.initFooter.bind(view) : true,
+                        () => {
+                            const subPage = ((view.queryKeys.subPage)
+                                ? view.query[view.queryKeys.subPage]
+                                : null)
+                                || view.defaultSubPage;
+        
+                            return (subPage)
+                                ? view.loadSubPage(subPage)
+                                : Promise.resolve(false);
+                        }
+                    ], domEvt);
                 });
         }
         initSidebar() {

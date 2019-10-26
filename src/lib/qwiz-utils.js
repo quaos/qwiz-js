@@ -118,7 +118,11 @@ module.exports = (function(_namespace) {
           if (propDesc) {
             break;
           }
-          obj = obj.__prototype__ || obj.constructor.prototype;
+          const objProto = obj.__prototype__ || obj.constructor.prototype;
+          if (objProto === obj) {
+              break;
+          }
+          obj = objProto;
         }
         return (!propDesc) || (propDesc.writable);
     }
@@ -548,6 +552,93 @@ module.exports = (function(_namespace) {
         return dest;
     }
 
+    /**
+     * cascade: Used to create cascading search function, for ex. to emulate CSS in React Native Stylesheets
+     * @param {Array} layers
+     * @param {Object} opts
+     * @returns {Function<string>} query
+     */
+    function cascade(layers, opts) {
+        opts = opts || {};
+
+        function query(keyPath) {
+            const ctx = {
+                layers: layers,
+                keyPath: keyPath,
+                selected: null
+            };
+            (opts.onBefore) && opts.onBefore(ctx);
+            const vals = layers.map((layer) => getPropByPath(layer, ctx.keyPath));
+            (opts.onValues) && opts.onValues(vals, ctx);
+            if ((typeof ctx.selected !== "undefined") && (ctx.selected !== null)) {
+                return ctx.selected;
+            }
+            for (let val of vals) {
+                if (typeof val !== "undefined") {
+                    ctx.selected = val;
+                    break;
+                }
+            }
+
+            return ctx.selected;
+        }
+        query.toObject = (refObj) => {
+            const target = {};
+            if (!refObj) {
+                refObj = {};
+                layers.forEach((layer) => QUtils.merge(refObj, layer, { deep: true }));
+            }
+            QUtils.walkObject(refObj, {
+                target: target,
+                onDefault: (val1, ctx) => {
+                    return query(ctx.fullKey);
+                }
+            });
+
+            return target;
+        };
+
+        return query;
+    }
+
+    /**
+     * chainPromises: Used to chain Promise-returning functions sequentially
+     * @param {Array<Function|any>} fns 
+     * @param {Array} params1
+     * @returns {Array} results
+     */
+    function chainPromises(fns, ...params1) {
+        const _this = this;
+        const results = [];
+
+        function next(i, _params) {
+            if (i >= fns.length) {
+                return Promise.resolve(results);
+            }
+            const fn = fns[i];
+            let prom = (typeof fn === "function")
+                ? fn.apply(_this, _params)
+                : fn;
+            ((!prom) || (typeof prom.then !== "function"))
+                && (prom = Promise.resolve(prom));
+            
+            return prom
+                .then((result) => {
+                    results.push(result);
+
+                    return next(i+1, [ result ]);
+                });
+        }
+
+        return next(0, params1);
+    }
+
+    /**
+     * extendClass: Used for extension of older ES constructor functions syntax
+     * @param {Object} parent 
+     * @param {Object} childProto 
+     * @param {Object} childStatic 
+     */
     function extendClass(parent, childProto, childStatic) {
         let childProto2 = Object.create(parent.prototype);
         let childCls = ((childProto) ? childProto.constructor : null) || function QWiz_auto_constructor () {
@@ -562,6 +653,11 @@ module.exports = (function(_namespace) {
 
         return childProto2;
     }
+    /**
+     * attachExtension: Used for attaching extension class prototype & static properties to base class
+     * @param {Function} cls 
+     * @param {Function} extCls 
+     */
     function attachExtension(cls, extCls) {
         if (!cls.prototype) {
             cls.prototype = { constructor: cls };
@@ -571,7 +667,12 @@ module.exports = (function(_namespace) {
 
         return cls.prototype;
     }
-        
+    
+    /**
+     * makeFactory: Maps or creates a factory function for a class
+     * @param {Function} cls 
+     * @param {Function} fac
+     */
     function makeFactory(cls, fac) {
         if (!fac) {
             fac = function QWiz_auto_factory() {
@@ -597,6 +698,8 @@ module.exports = (function(_namespace) {
         walkObject: walkObject,
         merge: merge,
         clone: clone,
+        cascade: cascade,
+        chainPromises: chainPromises,
         extendClass: extendClass,
         attachExtension: attachExtension,
         makeFactory: makeFactory

@@ -179,6 +179,8 @@ class Decimal {
         }
 
         const chunks3 = Decimal.addChunks(this._.chunks, chunks2, {
+            precision: this.precision,
+            chunkSize: this.chunkSize,
             sign1: this.sign,
             sign2: sign2
         });
@@ -236,16 +238,19 @@ class Decimal {
             sign: sign3, chunkSize: this.chunkSize
         });
     }
-    div(another) {
-        return this.divWithMod(another)[0];
+    div(another, opts) {
+        return this.divWithMod(another, opts)[0];
     }
-    mod(another) {
-        return this.divWithMod(another)[1];
+    mod(another, opts) {
+        return this.divWithMod(another, opts)[1];
     }
-    divWithMod(another) {
+    divWithMod(another, opts) {
+        opts = opts || {};
+        opts.precision = this.precision;
+        opts.chunkSize = this.chunkSize;
         let Q;
         let R;
-        [ Q, R ] = Decimal.divWithModChunks(this._.chunks, another);
+        [ Q, R ] = Decimal.divWithModChunks(this._.chunks, another, opts);
 
         let q2 = new Decimal(Q, this.precision, {
             chunkSize: this.chunkSize,
@@ -397,6 +402,8 @@ QUtils.merge(Decimal, {
         chunks3 = [];
         const n1 = chunks1.length;
         const n2 = chunks2.length;
+        const precision = opts.precision || Decimal.DEFAULT_PRECISION;
+        const chunkSize = opts.chunkSize || Decimal.DEFAULT_CHUNK_SIZE;
         const sign1 = opts.sign1 || 1;
         const sign2 = opts.sign2 || 1;
         Decimal.iterateChunks(chunks1, chunks2,
@@ -410,16 +417,16 @@ QUtils.merge(Decimal, {
                 if (x1) {
                     p = x1[1];
                     xF1 = 1;
-                    xF2 = (x2) ? Math.pow(x2[1] - p) : 1;
+                    xF2 = (x2) ? Math.pow(10, x2[1] - p) : 1;
                 } else {
                     p = x2[1];
-                    xF1 = 1; //Math.pow(x1[1] - p);
+                    xF1 = 1; //Math.pow(10, x1[1] - p);
                     xF2 = 1;
                 }
                 const chunk = Decimal.getChunk(chunks3, p, {
                     autoCreate: true,
-                    precision: this.precision,
-                    chunkSize: this.chunkSize
+                    precision: precision,
+                    chunkSize: chunkSize
                 });
                 chunk[0] += ((x1) ? x1[0]*sign1*xF1 : 0)
                     + ((x2) ? x2[0]*sign2*xF2 : 0);
@@ -446,6 +453,8 @@ QUtils.merge(Decimal, {
         }
         const chunks2 = m2;
         chunks3 = [];
+        const precision = opts.precision || Decimal.DEFAULT_PRECISION;
+        const chunkSize = opts.chunkSize || Decimal.DEFAULT_CHUNK_SIZE;
         /*
         Polynomial: ((10^p1)x1 + (10^p2)x2 + ... + (10^pn)xn)((10^q1)y1 + (10^q2)y2 + ... + bnyn)
           => 10^(p1+q1)x1y1 + 10^(p1+q2)a1y2 + ...
@@ -471,8 +480,8 @@ QUtils.merge(Decimal, {
                 }
                 const chunk = Decimal.getChunk(chunks3, p, {
                     autoCreate: true,
-                    precision: opts.precision,
-                    chunkSize: opts.chunkSize
+                    precision: precision,
+                    chunkSize: chunkSize
                 });
                 chunk[0] += x3*xF;
             },
@@ -483,6 +492,7 @@ QUtils.merge(Decimal, {
         return chunks3;
     },
     divWithModChunks: function (chunks1, d2, opts) {
+        opts = opts || {};
         let R = chunks1.slice();
         let Q = chunks1.map((chunk) => [ 0, chunk[1] ]);
         let chunks2;
@@ -493,6 +503,8 @@ QUtils.merge(Decimal, {
         }
         const n1 = chunks1.length;
         const n2 = chunks2.length;
+        const precision = opts.precision || Decimal.DEFAULT_PRECISION;
+        const chunkSize = opts.chunkSize || Decimal.DEFAULT_CHUNK_SIZE;
         /*
         Polynomial long division
         ref: https://en.wikipedia.org/wiki/Polynomial_long_division#Pseudo-code
@@ -504,10 +516,16 @@ QUtils.merge(Decimal, {
         let qP = leadChunk2[1];
         while ((!isNearZero(r)) && (rP >= qP) && (leadChunk1) && (leadChunk2)) {
             const dPF = Math.pow(10, rP-qP);
-            const tMod = dPF*leadChunk1[0]%leadChunk2[0]
+            const tMod = dPF*leadChunk1[0]%leadChunk2[0];
             const t = Math.round((dPF*leadChunk1[0] - tMod)/leadChunk2[0]);
-            Q = Decimal.addChunks(Q, t);
-            R = Decimal.addChunks(R, Decimal.mulChunks(t, Decimal.mulChunks(Q, -1)));
+            Q = Decimal.addChunks(Q, t, { precision: precision, chunkSize: chunkSize });
+            R = Decimal.addChunks(R,
+                Decimal.mulChunks(t,
+                    Decimal.mulChunks(Q, -1, { precision: precision, chunkSize: chunkSize }),
+                    { precision: precision, chunkSize: chunkSize }
+                ),
+                { precision: precision, chunkSize: chunkSize }
+            );
             r = R.reduce((z = 0, x) => z + x[0]*Math.pow(10, x[1]));
             leadChunk1 = Decimal.getLeadingNonZeroChunk(R);
             leadChunk2 = Decimal.getLeadingNonZeroChunk(chunks2);

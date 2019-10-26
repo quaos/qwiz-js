@@ -240,6 +240,87 @@ describe("qwiz-utils", function () {
             assert.notEqual(obj2.c.cd[3], obj.c.cd[3]);
             done();
         }).timeout(TEST_TIMEOUT);
+        
+        it("Can do object cascade: cascade()", (done) => {
+            assert.equal(typeof QUtils.cascade, "function");
+
+            const expected = {
+                display: "flex",
+                fontSize: 18,
+                color: "black"
+            };
+            //let nFlds = 0;
+            const styles = {
+                ".nav ul li": {
+                    display: "flex"
+                },
+                "li": {
+                    display: "block",
+                    color: "gray",
+                    fontSize: "18 !important"
+                },
+                "#mainNav ul li": {
+                    fontSize: 14,
+                    color: "black"
+                }
+            };
+            const layers = [
+                styles["#mainNav ul li"],
+                styles[".nav ul li"],
+                styles["ul li"],
+                styles.li
+            ];
+            const impTag = /(\s+)!important$/i;
+            const queryFn = QUtils.cascade(layers, {
+                onValues: (vals, ctx) => {
+                    for (let val of vals) {
+                        if (impTag.test(val)) {
+                            ctx.selected = val.replace(impTag, "");
+                            break;
+                        }
+                    }
+                }
+            });
+            debug(DEBUG_NS)("Got query function: ", queryFn);
+            const result = queryFn.toObject();
+            /*{
+                display: queryFn("display"),
+                fontSize: queryFn("fontSize"),
+                color: queryFn("color")
+            };*/
+            debug(DEBUG_NS)("Projected cascade object: ", result);
+            assert.equal(result.display, expected.display);
+            assert.equal(result.fontSize, expected.fontSize);
+            assert.equal(result.color, expected.color);
+            done();
+        }).timeout(TEST_TIMEOUT);
+        
+        it("Can chain Promise-returning functions: chainPromises()", () => {
+            assert.equal(typeof QUtils.chainPromises, "function");
+
+            function incr(x) {
+                debug(DEBUG_NS)('incr(): ', x);
+                return Promise.resolve(x+1);
+            }
+            const dbl = (x) => {
+                debug(DEBUG_NS)('dbl(): ', x);
+                return x*2;
+            };
+            const expected = [2, 4, 5];
+            const fns = [
+                incr,
+                dbl,
+                incr
+            ];
+            return QUtils.chainPromises(fns, 1)
+                .then((result) => {
+                    debug(DEBUG_NS)("chainPromises(): Got result: ", result);
+                    for (let i=0;i < expected.length;i++) {
+                        assert.equal(result[i], expected[i]);
+                    }
+                    return Promise.resolve(result);
+                });
+        }).timeout(TEST_TIMEOUT);
     });
     
     describe("Class Utils", function () {

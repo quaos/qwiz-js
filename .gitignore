@@ -2,14 +2,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 dist/*
-public/assets/css/*.bundle.css
-public/assets/css/*.bundle.css.map
-public/assets/css/*.bundle.min.css
-public/assets/css/*.bundle.min.css.map
-public/assets/js/*.bundle.js
-public/assets/js/*.bundle.js.map
-public/assets/js/*.bundle.min.js
-public/assets/js/*.bundle.min.js.map
+public/assets/css/qwiz.bundle.*
+public/assets/js/qwiz.bundle.*
 
 # dependencies
 /node_modules
